@@ -157,8 +157,8 @@ def test_forward_two_letters_joined_in_one_paragraph():
 
 def test_forward_three_letters_listed():
     paras = forward_paragraphs("กรมตัวอย่าง", _fw(3))
-    assert paras[0] == "กรมตัวอย่าง ขอส่งสำเนาหนังสือ จำนวน ๓ ฉบับ ดังนี้"
-    assert [p[:2] for p in paras[1:4]] == ["๑.", "๒.", "๓."]
+    assert paras[0] == "กรมตัวอย่าง ขอส่งสำเนาหนังสือ จำนวน 3 ฉบับ ดังนี้"
+    assert [p[:2] for p in paras[1:4]] == ["1.", "2.", "3."]
     assert paras[-1] == "จึงเรียนมาเพื่อทราบ"
     assert len(paras) == 5
 

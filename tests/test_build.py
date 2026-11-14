@@ -234,3 +234,27 @@ def test_zip_per_skill(tmp_path):
     assert "thai-official-letters/scripts/thaigov.py" in zn
     assert "thai-official-letters/scripts/thaidocs/official/__init__.py" in zn
     assert not any("/official/" in x for x in zipfile.ZipFile(tmp_path / "thai-docx.zip").namelist())
+
+
+def test_official_script_runs(tmp_path):
+    # แตก zip ของ skill ลง tmp_path แล้วรันสคริปต์จากที่นั่น (cwd นอก repo, ไม่มี PYTHONPATH) ว่าใช้งานได้จริง
+    build = _build_module()
+    skill = tmp_path / "pack" / "thai-official-letters"
+    shutil.copytree(OFFICIAL, skill, ignore=shutil.ignore_patterns("__pycache__", "thaidocs"))
+    build.sync(build.SKILLS["thai-official-letters"], build.SRC, skill / "scripts" / "thaidocs")
+    zpath = tmp_path / "dist" / "thai-official-letters.zip"
+    build.write_zip(build.SKILLS["thai-official-letters"], skill, zpath, without_khammoon=True)
+    out = tmp_path / "extract"
+    zipfile.ZipFile(zpath).extractall(out)
+    script = out / "thai-official-letters" / "scripts" / "thaigov.py"
+    env = {k: v for k, v in __import__("os").environ.items() if k != "PYTHONPATH"}
+    env["HOME"] = env["USERPROFILE"] = str(tmp_path / "home")
+    cmd = [sys.executable, "-B", str(script)]
+    run = lambda *a: subprocess.run([*cmd, *a], cwd=tmp_path, env=env, capture_output=True, text=True, encoding="utf-8")
+    ex = run("example", "memo")
+    assert ex.returncode == 0, ex.stderr
+    (tmp_path / "memo.json").write_text(ex.stdout, encoding="utf-8")
+    r = run("render", "memo.json", "out.docx")
+    assert r.returncode == 0, r.stderr
+    assert "สร้างไฟล์" in r.stdout
+    assert (tmp_path / "out.docx").is_file()

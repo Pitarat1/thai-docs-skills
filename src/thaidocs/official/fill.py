@@ -12,7 +12,6 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from ..digits import to_thai_digits
 from . import salutations
 from .profile import AgencyInfo
 from .schema import (AnyDoc, CertificateDoc, ExternalLetterDoc, ForwardedLetter, MemoDoc, MinutesDoc,
@@ -33,7 +32,8 @@ _DEFAULT_CLOSING = "ขอแสดงความนับถือ"
 
 def forward_paragraphs(issuer: str, letters: list[ForwardedLetter]) -> list[str]:
     """ข้อความตายตัวของหนังสือประทับตราที่ส่งสำเนาหนังสือต้นเรื่องเพื่อทราบ
-    ๑–๒ ฉบับ: ประโยคเดียว เชื่อมด้วย "และสำเนา"; ๓ ฉบับขึ้นไป: "จำนวน n ฉบับ ดังนี้" แล้วแยกข้อ"""
+    ๑–๒ ฉบับ: ประโยคเดียว เชื่อมด้วย "และสำเนา"; ๓ ฉบับขึ้นไป: "จำนวน n ฉบับ ดังนี้" แล้วแยกข้อ
+    เลขที่เขียนเป็นเลขอารบิก ตัว render แปลงเป็นเลขไทยเองเมื่อเปิด thai_numerals"""
     def ref(x: ForwardedLetter) -> str:
         speed = f" {x.speed}" if x.speed else ""
         return f"หนังสือ{x.agency}{speed} ที่ {x.doc_no} ลงวันที่ {x.date} เรื่อง {x.subject}"
@@ -41,8 +41,8 @@ def forward_paragraphs(issuer: str, letters: list[ForwardedLetter]) -> list[str]
     if len(letters) <= 2:
         refs = " และสำเนา".join(ref(x) for x in letters)
         return [f"{issuer} ขอส่งสำเนา{refs}", "จึงเรียนมาเพื่อทราบ"]
-    items = [f"{to_thai_digits(str(i))}. {ref(x)}" for i, x in enumerate(letters, 1)]
-    return [f"{issuer} ขอส่งสำเนาหนังสือ จำนวน {to_thai_digits(str(len(letters)))} ฉบับ ดังนี้",
+    items = [f"{i}. {ref(x)}" for i, x in enumerate(letters, 1)]
+    return [f"{issuer} ขอส่งสำเนาหนังสือ จำนวน {len(letters)} ฉบับ ดังนี้",
             *items, "จึงเรียนมาเพื่อทราบ"]
 
 
