@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thaidocs"
-version = "0.1.0"
+version = "0.2.0"
 description = "เครื่องมือจัดหน้าและตัดคำไทยสำหรับเอกสาร Word"
 readme = "README.md"
 license = "Apache-2.0"
@@ -17,16 +17,18 @@ dependencies = [
 
 [project.scripts]
 thaidocx = "thaidocs.cli:main"
+thaigov = "thaidocs.official.cli:main"
 
 [project.optional-dependencies]
 khammoon = ["numpy"]
-dev = ["pytest", "numpy"]
+official = ["pydantic>=2"]
+dev = ["pytest", "numpy", "pydantic>=2"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-thaidocs = ["data/*.txt", "_khammoon/model/*"]
+thaidocs = ["data/*.txt", "_khammoon/model/*", "official/examples/*.json", "official/data/*.png"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

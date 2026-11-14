@@ -17,11 +17,18 @@ SKILL = ROOT / "plugins" / "thai-docs" / "skills" / "thai-docx"
 SCRIPT = SKILL / "scripts" / "thaidocx.py"
 
 
+OFFICIAL = ROOT / "plugins" / "thai-docs" / "skills" / "thai-official-letters"
+
+
 def _build_module():
     spec = importlib.util.spec_from_file_location("thaidocs_build", BUILD)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def _docx(build):
+    return build.SKILLS["thai-docx"]
 
 
 def _run(*args, cwd=ROOT):
@@ -43,12 +50,12 @@ def test_check_detects_drift(tmp_path):
     shutil.copytree(ROOT / "src" / "thaidocs", src,
                     ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "_khammoon"))
     dst = tmp_path / "dst"
-    build.sync(src, dst, without_khammoon=True)
-    assert build.diff(src, dst, without_khammoon=True) == []
+    build.sync(_docx(build), src, dst, without_khammoon=True)
+    assert build.diff(_docx(build), src, dst, without_khammoon=True) == []
     (dst / "cli.py").write_text("# แก้\n", encoding="utf-8")
     (src / "new.py").write_text("x = 1\n", encoding="utf-8")
     (dst / "stale.py").write_text("y = 2\n", encoding="utf-8")
-    d = build.diff(src, dst, without_khammoon=True)
+    d = build.diff(_docx(build), src, dst, without_khammoon=True)
     assert any("cli.py" in x for x in d)
     assert any("new.py" in x for x in d)
     assert any("stale.py" in x for x in d)
@@ -61,18 +68,19 @@ def test_junk_files_ignored(tmp_path, name):
     src.mkdir()
     (src / "a.py").write_text("a = 1\n", encoding="utf-8")
     dst = tmp_path / "dst"
-    build.sync(src, dst)
+    sk = _docx(build)
+    build.sync(sk, src, dst)
     (src / name).write_text("junk\n", encoding="utf-8")
     (dst / name).write_text("other junk\n", encoding="utf-8")
-    assert build.diff(src, dst) == []
-    build.sync(src, dst)
+    assert build.diff(sk, src, dst) == []
+    build.sync(sk, src, dst)
     assert not (dst / name).exists()
 
 
 def _zips(build, skill: Path, dist: Path) -> tuple[Path, Path]:
     full, nok = dist / "thai-docx.zip", dist / "thai-docx-nokhammoon.zip"
-    build.write_zip(skill, full)
-    build.write_zip(skill, nok, without_khammoon=True)
+    build.write_zip(_docx(build), skill, full)
+    build.write_zip(_docx(build), skill, nok, without_khammoon=True)
     return full, nok
 
 
@@ -81,7 +89,7 @@ def test_zip_layout(tmp_path):
     build = _build_module()
     skill = tmp_path / "thai-docx"
     shutil.copytree(SKILL, skill, ignore=shutil.ignore_patterns("__pycache__", "thaidocs"))
-    build.sync(build.SRC, skill / "scripts" / "thaidocs")
+    build.sync(_docx(build), build.SRC, skill / "scripts" / "thaidocs")
     full, nok = _zips(build, skill, tmp_path / "dist")
     for z in (full, nok):
         assert z.stat().st_size < 10 * 1024 * 1024
@@ -176,3 +184,53 @@ def test_license_in_skill_and_checked(tmp_path):
     assert any("LICENSE" in x for x in build.diff_notice(skill))
     (skill / "LICENSE").unlink()
     assert any("LICENSE" in x for x in build.diff_notice(skill))
+
+
+def test_skills_table():
+    build = _build_module()
+    assert build.SKILLS["thai-docx"].exclude == ("official",)
+    assert build.SKILLS["thai-official-letters"].exclude == ()
+
+
+def test_thai_docx_has_no_official():
+    assert not (SKILL / "scripts" / "thaidocs" / "official").exists()
+
+
+def test_official_skill_has_full_package():
+    pkg = OFFICIAL / "scripts" / "thaidocs"
+    assert (pkg / "official" / "__init__.py").is_file()
+    assert (pkg / "layout.py").is_file()
+    assert (pkg / "data" / "words_th.txt").is_file()
+    assert (OFFICIAL / "scripts" / "thaigov.py").is_file()
+    for f in ("NOTICE", "LICENSE"):
+        assert (OFFICIAL / f).read_bytes() == (ROOT / f).read_bytes()
+
+
+def test_check_covers_all_skills(tmp_path):
+    # --check ต้องตรวจสำเนาของ skill ใหม่ด้วย: แก้ไฟล์ในสำเนาแล้วต้องคืน 1 (คืนไฟล์เดิมในตอนท้าย)
+    target = OFFICIAL / "scripts" / "thaidocs" / "layout.py"
+    original = target.read_bytes()
+    try:
+        target.write_text("# แก้\n", encoding="utf-8")
+        r = _run(BUILD, "--check")
+        assert r.returncode == 1, r.stdout + r.stderr
+        assert "layout.py" in r.stdout
+    finally:
+        target.write_bytes(original)
+    assert _run(BUILD, "--check").returncode == 0
+
+
+def test_zip_per_skill(tmp_path):
+    r = _run(BUILD, "--zip", "--dist", tmp_path)
+    assert r.returncode == 0, r.stdout + r.stderr
+    names = sorted(p.name for p in tmp_path.glob("*.zip"))
+    assert names == ["thai-docx-nokhammoon.zip", "thai-docx.zip",
+                     "thai-official-letters-nokhammoon.zip", "thai-official-letters.zip"]
+    for n, root in (("thai-docx.zip", "thai-docx/"), ("thai-official-letters.zip", "thai-official-letters/")):
+        zn = zipfile.ZipFile(tmp_path / n).namelist()
+        assert all(x.startswith(root) for x in zn)
+        assert (root + "NOTICE") in zn and (root + "LICENSE") in zn
+    zn = zipfile.ZipFile(tmp_path / "thai-official-letters.zip").namelist()
+    assert "thai-official-letters/scripts/thaigov.py" in zn
+    assert "thai-official-letters/scripts/thaidocs/official/__init__.py" in zn
+    assert not any("/official/" in x for x in zipfile.ZipFile(tmp_path / "thai-docx.zip").namelist())
