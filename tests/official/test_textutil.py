@@ -56,3 +56,16 @@ def test_salutations():
     assert salutations.suggest("อธิบดี") == ("เรียน", "ขอแสดงความนับถือ")
     assert salutations.pair_ok("เรียน", "ขอแสดงความนับถือ")
     assert not salutations.pair_ok("กราบเรียน", "ขอแสดงความนับถือ")
+
+
+def test_core_modules_import_without_pydantic():
+    import subprocess
+    import sys
+
+    code = (
+        "import sys; sys.modules['pydantic'] = None\n"
+        "import thaidocs.official.textutil, thaidocs.official.salutations\n"
+        "import thaidocs.official.style, thaidocs.official.profile\n"
+    )
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
