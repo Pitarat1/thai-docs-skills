@@ -69,3 +69,11 @@ def test_core_modules_import_without_pydantic():
     )
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
+
+
+def test_has_arabic_digits_follows_core_keep_rules():
+    assert not has_arabic_digits("โรค COVID-19 ระบาด")
+    assert not has_arabic_digits("มาตรฐาน ISO 27001")
+    assert not has_arabic_digits("เว็บ https://example.org/a1 อีเมล a1@example.org")
+    assert has_arabic_digits("ปี 2569")
+    assert has_arabic_digits("โรค COVID-19 ระบาดปี 2569")

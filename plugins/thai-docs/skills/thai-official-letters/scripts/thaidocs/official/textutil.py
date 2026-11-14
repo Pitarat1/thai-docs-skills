@@ -7,7 +7,7 @@ from __future__ import annotations
 import re
 from datetime import date
 
-from ..digits import to_thai_digits
+from ..digits import KEEP, to_thai_digits
 
 ARABIC = "0123456789"
 THAI = "๐๑๒๓๔๕๖๗๘๙"
@@ -21,8 +21,9 @@ THAI_MONTHS = [
 # [ระบุ...] คือช่องที่ห้ามแต่งขึ้นเอง ปล่อยให้ผู้ใช้เติม
 PLACEHOLDER_RE = re.compile(r"\[ระบุ[^\]]*\]")
 ARABIC_DIGIT_RE = re.compile(r"[0-9]")
-# ข้าม URL / อีเมลเมื่อตรวจเลขอารบิก
-_KEEP_RE = re.compile(r"(https?://\S+|[\w.+-]+@[\w-]+\.[\w.]+)")
+# ส่วนที่ตัวแปลงเลขไทยของแกน (thaidocs.digits) คงเลขอารบิกไว้โดยตั้งใจ: URL อีเมล DOI รหัสนำด้วยอักษรละติน
+# (COVID-19, ISO 27001) — การตรวจเลขอารบิกต้องข้ามส่วนเดียวกัน
+KEEP_RE = KEEP
 
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
@@ -41,8 +42,13 @@ def to_arabic_digits(text: str) -> str:
     return text.translate(_TO_ARABIC)
 
 
+def strip_kept(text: str) -> str:
+    """แทนส่วนที่คงเลขอารบิก (KEEP_RE) ด้วยช่องว่าง"""
+    return KEEP_RE.sub(" ", text or "")
+
+
 def has_arabic_digits(text: str) -> bool:
-    stripped = _KEEP_RE.sub("", text or "")
+    stripped = strip_kept(text)
     return bool(ARABIC_DIGIT_RE.search(stripped))
 
 

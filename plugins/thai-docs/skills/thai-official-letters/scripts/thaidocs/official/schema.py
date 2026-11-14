@@ -270,9 +270,9 @@ class MinutesDoc(_Base):
                                  description="๒๕.๕ ผู้มาประชุม (ผู้แทน: ระบุว่ามาแทนผู้ใด)")
     absentees: list[str] = Field(default_factory=list, description="๒๕.๖ ผู้ไม่มาประชุม (พร้อมเหตุผล ถ้ามี)")
     others: list[str] = Field(default_factory=list, description="๒๕.๗ ผู้เข้าร่วมประชุม")
-    start_time: str = Field("[ระบุ]", description="๒๕.๘")
+    start_time: str = Field("[ระบุ]", description="๒๕.๘ เวลาเริ่มประชุม เขียนเฉพาะเวลา เช่น '๐๙.๓๐' ไม่ต้องมี 'น.' เพราะระบบต่อให้เอง")
     agenda: list[AgendaItem]                                          # ๒๕.๙
-    end_time: str = Field("[ระบุ]", description="๒๕.๑๐")
+    end_time: str = Field("[ระบุ]", description="๒๕.๑๐ เวลาเลิกประชุม เขียนเฉพาะเวลา เช่น '๑๑.๓๐' ไม่ต้องมี 'น.' เพราะระบบต่อให้เอง")
     recorder: Signer = Signer(name="[ระบุผู้จดรายงานการประชุม]", position=["ผู้จดรายงานการประชุม"])  # ๒๕.๑๑
 
 
