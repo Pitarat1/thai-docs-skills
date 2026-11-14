@@ -103,8 +103,6 @@ class LayoutSpec:
     memo_phone_tab_cm: Optional[float] = None      # "โทร" แยกไปแท็บนี้ในบรรทัดหน่วยงาน
     memo_signature_mode: str = "center"            # center = กึ่งกลางแท็บ signature_center_cm / paren = "(" ที่แนววันที่
     memo_section_first_cm: Optional[float] = None  # บันทึก ๒/๒: ย่อหน้าข้อความใต้หัวข้อ
-    memo_footer_logo_png: Optional[str] = None     # โลโก้ท้ายบันทึกข้อความ (ทุกหน้า)
-    memo_footer_logo_w_cm: float = 7.8
     date_be_rules: bool = False          # ตรวจการใช้ "พ.ศ." ในวันที่ตามคู่มือหน่วยงาน
     doc_no_prefix: Optional[str] = None  # รหัสตัวพยัญชนะหน้าเลขที่หนังสือ (เช่น "มท")
     stamp_notify_only: bool = False      # หนังสือประทับตราใช้แจ้งเพื่อทราบเท่านั้น (แนวปฏิบัติของบางหน่วยงาน)

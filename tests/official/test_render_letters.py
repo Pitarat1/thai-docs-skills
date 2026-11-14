@@ -218,17 +218,24 @@ ARABIC_OVERRIDES = {
 }
 
 
-@pytest.mark.parametrize("doc_type", ["memo", "external_letter"])
+def arabic_overrides(doc_type):
+    """ชนิดหนังสือประทับตราเก็บข้อความใน paragraphs แทน body.cause"""
+    if doc_type == "stamp_letter":
+        return {"doc_no": ARABIC_OVERRIDES["doc_no"], "paragraphs": ARABIC_OVERRIDES["body.cause"]}
+    return ARABIC_OVERRIDES
+
+
+@pytest.mark.parametrize("doc_type", LETTERS)
 def test_thai_digits_by_default(render_example, doc_type):
-    text = all_text(render_example(doc_type, **ARABIC_OVERRIDES))
+    text = all_text(render_example(doc_type, **arabic_overrides(doc_type)))
     assert "๐๐๐๙/๙๘๗" in text and "๔๗" in text
     assert "https://example.org/a1" in text
     assert not re.search("[0-9]", KEEP.sub("", text))
 
 
-@pytest.mark.parametrize("doc_type", ["memo", "external_letter"])
+@pytest.mark.parametrize("doc_type", LETTERS)
 def test_arabic_digits_when_disabled(render_example, doc_type):
-    doc = render_example(doc_type, spec=replace(S, thai_numerals=False), **ARABIC_OVERRIDES)
+    doc = render_example(doc_type, spec=replace(S, thai_numerals=False), **arabic_overrides(doc_type))
     text = all_text(doc)
     assert "0009/987" in text and re.search(r"จำนวน\s47\s", text)
     assert "๐๐๐๙/๙๘๗" not in text and "๔๗" not in text
@@ -283,9 +290,6 @@ def test_placeholder_emblem_flag(render_example, tmp_path):
     assert len(pictures(doc)) == 1
 
 
-def test_render_returns_bytes_and_other_types_not_ready():
-    r = DocxRenderer()
-    data = r.render(parse_doc(load_example("memo")))
+def test_render_returns_bytes():
+    data = DocxRenderer().render(parse_doc(load_example("memo")))
     assert data[:2] == b"PK"
-    with pytest.raises(NotImplementedError):
-        r.render(parse_doc(load_example("order")))

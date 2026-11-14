@@ -27,6 +27,7 @@ from docx.shared import Cm, Pt, RGBColor
 from .. import layout
 from ..digits import to_thai_digits
 from .profile import PLACEHOLDER_EMBLEM
+from .schema import DocType
 from .style import DEFAULT_SPEC, LayoutSpec
 from .textutil import PLACEHOLDER_RE, clean_text, protect_breaks, split_paragraphs
 
@@ -48,6 +49,9 @@ class DocxRenderer:
         """สร้างเอกสาร คืนเนื้อไฟล์ .docx"""
         handler = {
             "memo": self._memo, "external_letter": self._external, "stamp_letter": self._stamp,
+            "order": self._order, "regulation": self._regulation, "bylaw": self._regulation,
+            "announcement": self._announcement, "statement": self._statement, "news": self._statement,
+            "certificate": self._certificate, "minutes": self._minutes,
         }.get(doc.doc_type.value)
         if handler is None:
             raise NotImplementedError(f"ยังไม่รองรับการสร้างหนังสือชนิด {doc.doc_type.value}")
@@ -339,6 +343,17 @@ class DocxRenderer:
         for i, line in enumerate(positions):
             self._centered_at(line, c, keep_next=i < len(positions) - 1)
 
+    def _issued(self, text: str):
+        """สั่ง/ประกาศ/ให้ไว้ ณ วันที่ ... (+ ลายมือชื่อ)"""
+        s = self.spec
+        if s.issued_blank_line:
+            self._par(keep_next=True)
+        self._line(text, left=s.issued_date_indent_cm, before=0 if s.issued_blank_line else s.closing_before_pt,
+                   keep_next=True)
+
+    def _issuer_signature(self, signer):
+        self._signature(signer, paren_cm=self.spec.signer_paren_cm)
+
     def _separator(self):
         s = self.spec
         if not s.separator_cm:
@@ -387,6 +402,28 @@ class DocxRenderer:
             self._line(f"โทรสาร {fax}")
         if email:
             self._line(f"ไปรษณีย์อิเล็กทรอนิกส์ {email}")
+
+    def _title_block(self, lines: list[str], *, emblem: bool = True):
+        """หัวหนังสือสั่งการ/ประชาสัมพันธ์: ตรากลาง + ชื่อเรื่องกึ่งกลาง + เส้นคั่น
+        ชื่อเรื่องตัวธรรมดาหรือตัวหนาตาม title_bold บรรทัดละ ๑ Enter เรื่องยาวขึ้นบรรทัดใหม่ตรงอักษรแรกของเรื่อง"""
+        s = self.spec
+        if emblem:
+            self._garuda(s.garuda_external_cm)
+        for i, t in enumerate(lines):
+            before = (s.block_before_pt if emblem else self._top_gap()) if i == 0 else 0
+            self._line(t, align=CENTER, bold=s.title_bold, before=before)
+        self._separator()
+
+    def _order_body(self, paragraphs: list[str], effective: Optional[str] = None):
+        """คำสั่ง/ระเบียบ/ข้อบังคับ: order_para_first_only → ย่อหน้าแรก +๖ พอยท์ ย่อหน้าถัดไป ๑ Enter, "ทั้งนี้ ตั้งแต่" +๖ พอยท์"""
+        s = self.spec
+        if not s.order_para_first_only:
+            self._body([*paragraphs, *([effective] if effective else [])])
+            return
+        for i, t in enumerate(split_paragraphs(list(paragraphs))):
+            self._line(t, align=DIST, first=s.para_indent_cm, before=s.para_before_pt if i == 0 else 0)
+        if effective:
+            self._line(effective, align=DIST, first=s.para_indent_cm, before=s.para_before_pt)
 
     # ------------------------------------------------------------ doc types
     def _external(self, x):
@@ -524,6 +561,188 @@ class DocxRenderer:
             self._centered(x.issuer, keep_next=True)
             self._centered(x.date)
         self._contact_block(x.owner_unit, x.phone, x.fax, email=x.email)
+
+    def _order(self, o):
+        """ข้อ ๑๖ คำสั่ง (แบบที่ ๔)"""
+        s = self.spec
+        self._title_block([f"คำสั่ง{o.issuer}", f"ที่ {o.doc_no}", f"เรื่อง  {o.subject}"])
+        if o.committees:
+            self._order_body(o.paragraphs)
+            for i, c in enumerate(o.committees, 1):
+                self._committee(str(i), c)
+            self._order_body([], o.effective)
+        else:
+            self._order_body(o.paragraphs, o.effective)
+        self._issued(f"สั่ง  ณ  วันที่  {o.date}")
+        self._issuer_signature(o.signer)
+
+    def _committee(self, no: str, c):
+        """คำสั่งแต่งตั้ง: หัวข้อคณะ → ตารางรายชื่อ (ไม่มีเส้น) → หน้าที่และอำนาจ → คณะย่อย"""
+        s = self.spec
+        self._line(f"{no}. {c.title}", left=s.para_indent_cm, before=s.para_before_pt, keep_next=True)
+        for t in split_paragraphs(list(c.paragraphs)):
+            self._line(t, align=DIST, first=s.para_indent_cm)
+        self._members(no, c.members)
+        self._duties(c.duties)
+        for j, g in enumerate(c.subgroups, 1):
+            sub = f"{no}.{j}"
+            self._line(f"{sub} {g.title}", left=s.para_indent_cm, before=s.para_before_pt, keep_next=True)
+            self._members(sub, g.members)
+            self._duties(g.duties)
+
+    def _members(self, no: str, members: list):
+        """ตารางรายชื่อ ๓ คอลัมน์: เลขข้อ | ชื่อ/ตำแหน่ง/สังกัด | บทบาท — แก้ไขต่อใน Word ได้ง่าย"""
+        if not members:
+            return
+        s = self.spec
+        widths = (s.para_indent_cm + 1.5, s.text_width_cm - s.para_indent_cm - 1.5 - 4.5, 4.5)
+        t = self.d.add_table(rows=0, cols=3)
+        t.autofit = False
+        for k, m in enumerate(members, 1):
+            row = t.add_row()
+            trPr = row._tr.get_or_add_trPr()
+            trPr.append(OxmlElement("w:cantSplit"))
+            lines = [m.name, *(x for x in (m.position, m.affiliation) if x)]
+            cells = row.cells
+            for cell, w in zip(cells, widths):
+                cell.width = Cm(w)
+            self._run(cells[0].paragraphs[0], f"{no}.{k}")
+            cells[0].paragraphs[0].paragraph_format.left_indent = Cm(s.para_indent_cm - 0.19)
+            for i, line in enumerate(lines):
+                cp = cells[1].paragraphs[0] if i == 0 else cells[1].add_paragraph()
+                self._run(cp, line)
+            self._run(cells[2].paragraphs[0], m.role)
+
+    def _duties(self, duties: list[str]):
+        if not duties:
+            return
+        s = self.spec
+        self._line("หน้าที่และอำนาจ", left=s.para_indent_cm, before=s.para_before_pt, keep_next=True, underline=True)
+        for n, d in enumerate(duties, 1):
+            self._line(f"{n})\t{d}", align=DIST, left=s.para_indent_cm + 0.75, hanging=0.75,
+                       tabs=[(s.para_indent_cm + 0.75, WD_TAB_ALIGNMENT.LEFT, WD_TAB_LEADER.SPACES)])
+
+    def _regulation(self, r):
+        """ข้อ ๑๗ ระเบียบ / ข้อ ๑๘ ข้อบังคับ (แบบที่ ๕–๖)"""
+        s = self.spec
+        word = "ระเบียบ" if r.doc_type == DocType.REGULATION else "ข้อบังคับ"
+        lines = [f"{word}{r.issuer}", f"ว่าด้วย{r.title}"]
+        if r.edition:
+            lines.append(f"(ฉบับที่ {r.edition})")
+        lines.append(f"พ.ศ. {r.year}")
+        self._title_block(lines)
+        self._body([r.preamble])
+        art_before = 0 if s.order_para_first_only else s.para_before_pt
+        for i, a in enumerate(r.articles, 1):
+            if a.chapter:
+                self._line(a.chapter, align=CENTER, bold=s.title_bold, before=s.closing_before_pt, keep_next=True)
+            self._line(f"ข้อ {i}  {a.text}", align=DIST, first=s.para_indent_cm, before=art_before)
+        self._issued(f"ประกาศ  ณ  วันที่  {r.date}")
+        self._issuer_signature(r.signer)
+
+    def _announcement(self, a):
+        """ข้อ ๒๐ ประกาศ / แจ้งความ (แบบที่ ๗)"""
+        s = self.spec
+        self._title_block([f"{a.word}{a.issuer}", f"เรื่อง  {a.subject}"])
+        self._body(a.paragraphs)
+        self._issued(f"{a.word}  ณ  วันที่  {a.date}")
+        self._issuer_signature(a.signer)
+
+    def _statement(self, st):
+        """ข้อ ๒๑ แถลงการณ์ / ข้อ ๒๒ ข่าว (แบบที่ ๘–๙) — ไม่มีลายมือชื่อ"""
+        s = self.spec
+        word = "แถลงการณ์" if st.doc_type == DocType.STATEMENT else "ข่าว"
+        lines = [f"{word}{st.issuer}", f"เรื่อง  {st.subject}"]
+        if st.number:
+            lines.append(f"ฉบับที่ {st.number}")
+        self._title_block(lines, emblem=s.news_emblem or st.doc_type == DocType.STATEMENT)
+        self._body(st.paragraphs, keep_tail=True)
+        if s.statement_issuer_cm is not None:
+            # ๓ Enter → ชื่อหน่วยงานเริ่มห่างแนวกึ่งกลาง ๒ ซม. → วัน เดือน ปี กึ่งกลางใต้ชื่อ
+            for _ in range(s.statement_blank_lines):
+                self._par(keep_next=True)
+            self._line(st.issuer, left=s.statement_issuer_cm, keep_next=True)
+            self._centered_at(st.date, s.statement_issuer_cm + self._text_cm(st.issuer) / 2)
+        else:
+            self._par(keep_next=True)
+            self._centered(st.issuer, before=s.closing_before_pt, keep_next=True)
+            self._centered(st.date)
+
+    def _certificate(self, c):
+        """ข้อ ๒๔ หนังสือรับรอง (แบบที่ ๑๐)"""
+        s = self.spec
+        self._garuda_header()
+        agency = c.agency or ["[ระบุส่วนราชการเจ้าของหนังสือ]"]
+        self._line(f"{s.cert_no_label} {c.doc_no}\t{agency[0]}", before=s.block_before_pt,
+                   tabs=[(s.agency_tab_cm, WD_TAB_ALIGNMENT.LEFT, WD_TAB_LEADER.SPACES)])
+        for line in agency[1:]:
+            self._line(line, left=s.agency_tab_cm)
+        if s.cert_title:
+            self._line("หนังสือรับรอง", align=CENTER, bold=True, before=s.closing_before_pt)
+            self._body(c.body, first_before=s.closing_before_pt)
+        else:
+            self._par()                                               # แบบที่ ๑๐: ๒ Enter → ข้อความ
+            self._body(c.body, first_before=0)
+        self._issued(f"ให้ไว้  ณ  วันที่  {c.date}")
+        self._issuer_signature(c.signer)
+        if c.photo_holder:
+            # รูปถ่าย ๔x๖ ซม. ประทับตราที่มุมล่างขวาคาบรูป + ลายมือชื่อผู้ได้รับการรับรองใต้รูป
+            self._line("[ติดรูปถ่าย ๔ x ๖ ซม.]", before=s.closing_before_pt)
+            self._par()
+            self._line(f"({c.photo_holder})")
+            self._line("ลายมือชื่อผู้ได้รับการรับรอง")
+
+    def _minutes(self, m):
+        """ข้อ ๒๕ รายงานการประชุม (แบบที่ ๑๑)"""
+        s = self.spec
+        date = m.date if m.date.startswith("เมื่อ") else f"เมื่อ{m.date}"
+        for i, t in enumerate((m.title, m.session, date, f"ณ {m.place}")):
+            self._line(t, align=CENTER, bold=s.minutes_title_bold, before=self._top_gap() if i == 0 else 0)
+        self._separator()
+        ul = s.minutes_label_underline
+        lbl = dict(bold=not ul, underline=ul)
+
+        def people(label, names):
+            if not names:
+                return
+            self._line(label, before=s.block_before_pt, keep_next=True, **lbl)
+            for i, n in enumerate(names, 1):
+                self._line(f"{i}. {n}", left=s.minutes_list_indent_cm)
+
+        people("ผู้มาประชุม", m.attendees)
+        people("ผู้ไม่มาประชุม", m.absentees)
+        people("ผู้เข้าร่วมประชุม", m.others)
+        p = self._par(before=s.closing_before_pt if not ul else s.block_before_pt)
+        self._run(p, "เริ่มประชุมเวลา", **lbl)
+        self._run(p, f" {m.start_time} น.")
+        for i, item in enumerate(m.agenda, 1):
+            p = self._par(before=s.closing_before_pt, keep_next=True,
+                          tabs=[(3.5, WD_TAB_ALIGNMENT.LEFT, WD_TAB_LEADER.SPACES)])
+            self._run(p, f"ระเบียบวาระที่ {i}\t{item.title}", bold=True)
+            self._body(item.discussion)
+            p = self._par(align=DIST, first=s.para_indent_cm, before=s.para_before_pt)
+            self._run(p, "มติที่ประชุม", bold=True)
+            self._run(p, f"  {item.resolution}")
+        p = self._par(before=s.closing_before_pt if not ul else s.para_before_pt)
+        self._run(p, "เลิกประชุมเวลา", **lbl)
+        self._run(p, f" {m.end_time} น.")
+        if s.minutes_recorder_cm is not None:
+            # แบบที่ ๑๑: ๔ Enter → (ลงชื่อ) เริ่มห่างแนวกึ่งกลาง ๒ ซม. → (ชื่อ) → ตำแหน่ง → ผู้จดรายงานการประชุม
+            for _ in range(s.signature_blank_lines):
+                self._par(keep_next=True)
+            x0 = s.minutes_recorder_cm
+            sig = "(ลงชื่อ)"
+            name = f"({m.recorder.name})"
+            c = x0 + max(self._text_cm(sig), self._text_cm(name)) / 2
+            self._line(sig, left=x0, keep_next=True)
+            self._centered_at(name, c, keep_next=True)
+            pos = [x for x in m.recorder.position if x.strip()]
+            if not any("ผู้จดรายงาน" in x for x in pos):
+                pos.append("ผู้จดรายงานการประชุม")
+            for i, line in enumerate(pos):
+                self._centered_at(line, c, keep_next=i < len(pos) - 1)
+        else:
+            self._signature(m.recorder, blank_lines=2)
 
 
 # ความกว้างข้อความ: อ่าน advance จากไฟล์ฟอนต์ TH Sarabun New ด้วย fontTools (ถ้ามี) ไม่งั้นใช้ค่าเฉลี่ย
