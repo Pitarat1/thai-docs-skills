@@ -1,0 +1,11 @@
+{
+  "name": "thai-docs",
+  "version": "0.1.0",
+  "description": "ชุด skill เอกสารภาษาไทย: จัดหน้าไฟล์ Word ไทย (ฟอนต์ TH Sarabun New เลขไทย กระจายแบบไทย) และตัดคำไม่ให้ขาดกลางคำ",
+  "author": {
+    "name": "Pitarat1"
+  },
+  "homepage": "https://github.com/Pitarat1/thai-docs-skills",
+  "repository": "https://github.com/Pitarat1/thai-docs-skills",
+  "keywords": ["thai", "docx", "word", "ภาษาไทย", "ตัดคำ"]
+}

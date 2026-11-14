@@ -1,0 +1,19 @@
+{
+  "name": "thai-docs-skills",
+  "owner": {
+    "name": "Pitarat1"
+  },
+  "metadata": {
+    "description": "skill เอกสารภาษาไทยสำหรับ Word: จัดหน้า ตัดคำ ตรวจก่อนส่ง",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "thai-docs",
+      "source": "./plugins/thai-docs",
+      "description": "จัดหน้าไฟล์ Word ภาษาไทยและตัดคำไม่ให้ขาดกลางคำ",
+      "version": "0.1.0",
+      "category": "productivity"
+    }
+  ]
+}

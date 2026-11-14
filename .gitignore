@@ -1,0 +1,12 @@
+.venv/
+.venv
+.venv.nosync/
+__pycache__/
+dist/
+* 2.*
+.DS_Store
+*.egg-info/
+.pytest_cache/
+
+# บันทึกสำหรับ AI ในเครื่องผู้พัฒนา (ไม่เผยแพร่)
+CLAUDE.md

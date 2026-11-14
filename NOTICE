@@ -1,0 +1,73 @@
+thaidocs
+Copyright 2026 Pitarat1 — โค้ดของ repo ใช้สัญญาอนุญาต Apache-2.0 (ข้อความเต็มในไฟล์ LICENSE)
+
+หมายเหตุเรื่อง path: ที่ราก repo โค้ดอยู่ที่ src/thaidocs/ ส่วนในโฟลเดอร์ skill (thai-docx.zip)
+สำเนาอยู่ที่ scripts/thaidocs/ ในไฟล์นี้อ้างด้วย path แบบอ้างอิงแพ็กเกจ "thaidocs/..." ซึ่งใช้ได้ทั้งสองที่
+
+ไฟล์และข้อมูลที่คัดมาจากโครงการอื่น
+====================================
+
+1. โค้ดตัดคำ newmm / TCC / Trie  (thaidocs/_vendor/)
+   - ที่มา: PyThaiNLP 5.4.0 (https://github.com/PyThaiNLP/pythainlp)
+   - ไฟล์: _vendor/tcc.py  (จาก pythainlp/tokenize/tcc_p.py)
+           _vendor/trie.py (จาก pythainlp/util/trie.py)
+           _vendor/newmm.py (จาก pythainlp/tokenize/newmm.py)
+   - สัญญาอนุญาต: Apache-2.0  Copyright 2016-2026 PyThaiNLP Project
+   - ดัดแปลง: ตัด import ภายนอก (pythainlp.*) ออก ใช้ import ภายในแพ็กเกจแทน;
+     newmm.segment ต้องส่ง trie เอง (ไม่มีพจนานุกรมเริ่มต้น) ระบุไว้ที่หัวไฟล์
+
+2. thaidocs/data/words_th.txt
+   - ที่มา: PyThaiNLP 5.4.0 pythainlp/corpus/words_th.txt
+   - สัญญาอนุญาต: CC0-1.0 (ตาม pythainlp/corpus/corpus_license.md)
+
+3. thaidocs/data/names_th.txt  (ชื่อชาย + ชื่อหญิง + นามสกุล + จังหวัด รวมกัน เรียง ไม่ซ้ำ)
+   - ชื่อชาย/ชื่อหญิง/นามสกุล: person_names_male_th.txt, person_names_female_th.txt,
+     family_names_th.txt ใน PyThaiNLP 5.4.0 ซึ่งมาจาก Thai Male and Female Names Corpus
+     (https://github.com/korkeatw/thai-names-corpus/) โดย Korkeat Wannapat
+     สัญญาอนุญาต: **CC BY-SA 4.0** (https://creativecommons.org/licenses/by-sa/4.0/)
+     ข้อควรระวัง: เงื่อนไข ShareAlike ครอบคลุมไฟล์ names_th.txt นี้ (ข้อมูลที่ดัดแปลง/รวมแล้ว)
+     ต้องคงสัญญา CC BY-SA 4.0 และระบุที่มา; ไม่ได้ทำให้โค้ดของ repo ต้องเป็น CC BY-SA
+     (เป็นการตีความของผู้เขียน ยังไม่ผ่านการตรวจโดยผู้เชี่ยวชาญด้านกฎหมาย)
+   - จังหวัด: thailand_provinces_th.csv (คอลัมน์แรก) สัญญาอนุญาต CC0-1.0
+
+4. thaidocs/data/places_th.txt  (ชื่ออำเภอ/เขต + ตำบล/แขวง ไม่ซ้ำ ตัดคำนำหน้า เรียง; 6,128 ชื่อ)
+   - ที่มา: กรมการปกครอง (DOPA) ชุดข้อมูล "dopa star" บน data.go.th
+     https://data.go.th/en/dataset/dopa-star  ไฟล์ stat_67.zip (พ.ศ. 2567)
+     (stat_t67.xls ชื่อตำบล/แขวง, stat_a67.xls ชื่อสำนักทะเบียนอำเภอ/เขต)
+   - สัญญาอนุญาตที่ระบุบนหน้าชุดข้อมูล: "Open Data Common"
+     **ยังตรวจไม่ได้ว่าข้อความเต็มของสัญญานี้อนุญาตให้ทำซ้ำ/แจกจ่ายต่อและใช้เชิงพาณิชย์
+     ได้หรือไม่ และต้องระบุที่มาอย่างไร** ควรตรวจกับ data.go.th/สำนักงานพัฒนารัฐบาลดิจิทัล (DGA)
+     ก่อนเผยแพร่สาธารณะ ข้อมูลที่ใช้เป็นเพียงรายการชื่อสถานที่ (ข้อเท็จจริง) ไม่รวมตัวเลขประชากร
+
+5. thaidocs/data/domain_th.txt
+   - รายการคำเฉพาะทางที่ผู้เขียน repo รวบรวมเอง (Apache-2.0 ตามโค้ดของ repo)
+
+6. thaidocs/layout.py และ thaidocs/ooxml.py
+   - ที่มา: SARABUN.AI โดย การประปาส่วนภูมิภาค (Provincial Waterworks Authority)
+     render/thai_layout.py
+     และ skill "thai-docx-layout-th" (ตาราง RPR_ORDER/PPR_ORDER, ตารางแปลงอักษร Private Use,
+     ลำดับ post-process) ของผู้เขียน repo นี้
+   - สัญญาอนุญาต: Apache-2.0  Copyright 2026 การประปาส่วนภูมิภาค
+     (ตาม engine/NOTICE ของ SARABUN.AI; ตราและโลโก้ของหน่วยงานไม่รวมในสัญญาอนุญาตและไม่ได้คัดมา)
+   - ดัดแปลง: เปลี่ยนจากแก้ XML ดิบเป็นทำงานบน python-docx ครอบคลุมทุก part (หัว/ท้ายกระดาษ เชิงอรรถ
+     styles numbering) เพิ่มฟังก์ชัน normalize_chars, set_font_all, align_sz, remove_manual_breaks,
+     distribute, keep_next_headings และให้ทุกฟังก์ชัน idempotent
+
+7. thaidocs/_khammoon/  (ตัวตัดคำมูล khammoon แบบ numpy อย่างเดียว)
+   - ที่มา: khammoon 0.1.0 (PyPI khammoon==0.1.0, https://github.com/warit-s/khammoon-segmenter)
+     Copyright 2026 The khammoon authors
+   - โค้ด: __init__.py, chars.py, tcc.py, numpy_model.py, segmenter.py
+     สัญญาอนุญาต: Apache-2.0
+     ดัดแปลง: __init__.py ย่อเหลือ Segmenter + MODEL_DIR; segmenter.py ตัด backend ONNX
+     (ไม่ได้คัด model.onnx) และหาโมเดลจาก ./model ข้างไฟล์แทน importlib.resources("khammoon")
+     ไม่ได้คัด: cli.py, metrics.py, model.py (torch), torch_infer.py, model/model.onnx
+     tcc.py ของ khammoon ดัดแปลงจาก PyThaiNLP (Apache-2.0; TCC โดย Theeramunkong et al. 2000,
+     Jakkrit TeCho, Wittawat Jitkrittum, Korakot Chaovavanich) ตาม NOTICE ของ khammoon
+   - โมเดล: _khammoon/model/weights.npz (+ vocab.json, meta.json ในโฟลเดอร์เดียวกัน)
+     สัญญาอนุญาต: **CC BY-NC-SA 4.0** (ข้อความเต็มใน _khammoon/model/LICENSE)
+     ตาม NOTICE ของ khammoon: โมเดลฝึกจากข้อมูลที่มีเงื่อนไข NonCommercial
+     (BEST2009 ของ NECTEC: CC BY-NC-SA 3.0; WangchanThaiInstruct ของ VISTEC/AIResearch:
+     CC BY-NC 4.0 / CC BY-SA 4.0 รายแถว)
+     ข้อควรระวัง: **ห้ามใช้เชิงพาณิชย์** และงานดัดแปลงของโมเดลต้องใช้สัญญาเดียวกัน
+     ถ้าต้องใช้เชิงพาณิชย์ ให้ถอด _khammoon/ ออก (tools/build.py --without-khammoon)
+     ตัวตัดคำจะใช้พจนานุกรมอย่างเดียว
