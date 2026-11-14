@@ -25,3 +25,5 @@ jobs:
           files: |
             dist/thai-docx.zip
             dist/thai-docx-nokhammoon.zip
+            dist/thai-official-letters.zip
+            dist/thai-official-letters-nokhammoon.zip

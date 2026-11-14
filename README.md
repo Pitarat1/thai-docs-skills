@@ -1,7 +1,8 @@
 # thai-docs-skills
 
-ชุด skill สำหรับเอกสาร Word ภาษาไทย ตอนนี้มี skill แรกคือ **`thai-docx`**: จัดหน้า Word ไทยให้ถูกหลัก
-และตัดคำไม่ให้ขาดกลางคำเมื่อขึ้นบรรทัดใหม่ ใช้ได้กับ Claude Code, claude.ai, Codex และ Antigravity
+ชุด skill สำหรับเอกสาร Word ภาษาไทย ตอนนี้มีสอง skill: **`thai-docx`** จัดหน้า Word ไทยให้ถูกหลัก
+และตัดคำไม่ให้ขาดกลางคำเมื่อขึ้นบรรทัดใหม่ กับ **`thai-official-letters`** ร่างและตรวจหนังสือราชการ 11 ชนิดเป็นไฟล์ Word
+(รายละเอียดอยู่ในหัวข้อ "หนังสือราชการ" ด้านล่าง) ใช้ได้กับ Claude Code, claude.ai, Codex และ Antigravity
 
 ## ทำอะไรได้
 
@@ -20,7 +21,7 @@
 > ตัวเลข 0.2% วัดกับข้อความทดสอบที่คำเฉพาะอยู่ในพจนานุกรมแล้ว ข้อความที่มีคำเฉพาะที่พจนานุกรมไม่มีอาจได้ผลด้อยกว่านี้
 > เมื่อวัดตัวตัดคำกับข้อความที่ไม่เคยเห็น ผิดขอบเขตคำราว 3.6% เมื่อมี khammoon และราว 7.1% เมื่อใช้พจนานุกรมอย่างเดียว
 
-## ติดตั้ง
+## ติดตั้ง `thai-docx`
 
 ต้องมี Python 3.10 ขึ้นไป และ `python-docx`, `lxml` (เสริม `numpy` สำหรับตัวตัดคำ khammoon) คำสั่งจะบอกวิธีติดตั้งเองถ้าขาด
 แพ็กเกจ: `pip install python-docx lxml numpy`
@@ -33,6 +34,7 @@
 | **Antigravity** | คัดลอกโฟลเดอร์ `thai-docx` ไปไว้ที่ `~/.gemini/config/skills/` (ทั้งเครื่อง) หรือ `<workspace>/.agents/skills/` (เฉพาะโปรเจกต์) เอกสารระบุว่ายังรองรับ `.agent/skills` แบบเดิมและ `~/.gemini/antigravity/skills/` ของ IDE แบบเดิม | [Antigravity: Agent skills](https://antigravity.google/docs/skills/) |
 
 หมายเหตุ: โฟลเดอร์ skill ต้องชื่อ `thai-docx` ตรงกับชื่อใน SKILL.md (zip ที่แจกจัดไว้ให้แล้ว)
+การติดตั้งผ่าน Claude Code plugin ได้ทั้งสอง skill พร้อมกัน ส่วน skill หนังสือราชการแยกติดตั้งด้วย zip ได้ ดูหัวข้อถัดไป
 
 ## คำสั่งที่ใช้บ่อย
 
@@ -51,7 +53,43 @@ python "<โฟลเดอร์ skill>/scripts/thaidocx.py" segment "อำเ
 ในแชทกับ AI พูดได้เลย เช่น "จัดไฟล์ report.docx ให้ตัดคำไม่ขาดกลางคำ แล้วบันทึกเป็น report_v2.docx"
 รายละเอียดทุกคำสั่งและตัวเลือกอยู่ใน `plugins/thai-docs/skills/thai-docx/SKILL.md`
 
-## ข้อแลกเปลี่ยนของ wrap
+## หนังสือราชการ (`thai-official-letters`)
+
+ร่างหนังสือราชการเป็นไฟล์ Word (.docx) ที่ระยะ ตำแหน่ง ขนาดอักษร ตรงแนวทางการพิมพ์หนังสือราชการ และตรวจร่างหรือไฟล์ก่อนส่ง
+สคริปต์ไม่เรียก AI หรือเครือข่ายใดๆ ทำงานกับไฟล์ในเครื่อง
+
+**ทำได้ 11 ชนิด:** บันทึกข้อความ, หนังสือภายนอก, หนังสือประทับตรา, คำสั่ง, ระเบียบ, ข้อบังคับ, ประกาศ, แถลงการณ์, ข่าว,
+หนังสือรับรอง, รายงานการประชุม
+
+ทำงานเป็นสามขั้น: AI (หรือคุณ) เขียนร่างเป็นไฟล์ JSON แล้ว `render` เป็น .docx แล้ว `check` ตรวจ
+คำสั่งที่มี: `types` (ดูชนิด) `schema` (ดูช่องข้อมูลของแต่ละชนิด) `example` `render` `check`
+
+```bash
+python "<โฟลเดอร์ skill>/scripts/thaigov.py" example memo memo.json
+python "<โฟลเดอร์ skill>/scripts/thaigov.py" render memo.json memo.docx
+python "<โฟลเดอร์ skill>/scripts/thaigov.py" check memo.docx
+```
+
+`<โฟลเดอร์ skill>` คือโฟลเดอร์ `thai-official-letters` ที่มี SKILL.md ในแชทกับ AI พูดได้เลย เช่น
+"ทำบันทึกข้อความขออนุมัติจัดประชุม" สิ่งที่ผู้ใช้ไม่ได้ให้ (ชื่อ ตำแหน่ง เลขที่หนังสือ วันที่) AI ต้องใส่ `[ระบุ…]` ไม่แต่งเอง
+และ `check` จะแจ้งช่องที่ยังไม่ได้กรอก รายละเอียดทุกคำสั่งอยู่ใน `plugins/thai-docs/skills/thai-official-letters/SKILL.md`
+
+**ต้องมี:** Python 3.10 ขึ้นไป และ `pip install python-docx lxml pydantic` (เสริม `numpy` เฉพาะเมื่อใช้ `--wrap-words`)
+
+**ติดตั้ง:** ผ่าน Claude Code plugin จะได้ skill นี้พร้อม `thai-docx` ส่วนวิธีอื่นใช้ `thai-official-letters.zip` จาก Releases
+(หรือ `thai-official-letters-nokhammoon.zip` ถ้าจะใช้เชิงพาณิชย์) แล้วทำตามตารางด้านบน แต่ใช้ชื่อโฟลเดอร์ `thai-official-letters`
+
+**ข้อจำกัด**
+
+- **ไม่แจกตราครุฑและตราหน่วยงาน** ไฟล์ที่สร้างจะมีกรอบแทนตรา ต้องใส่ตราเอง (`--emblem FILE` หรือวางไฟล์ไว้ที่ `~/.thaidocs/emblem.png`)
+  และผู้ใช้ต้องมีสิทธิ์ใช้ตรานั้นเอง
+- AI ไม่ออกเลขหนังสือและไม่ลงนามแทน ผู้ใช้ต้องออกเลข ตรวจเนื้อหา และลงนามเอง
+- ตารางคำขึ้นต้นและคำลงท้ายครอบคลุมเฉพาะกรณีที่พบบ่อย ผู้รับที่ไม่อยู่ในตารางต้องตรวจเอง
+- ตรวจผลที่พิมพ์ออกมาใน **Word for Mac เท่านั้น** ยังไม่ได้ตรวจกับ Word for Windows และ LibreOffice
+- ข้อความอ้างข้อของระเบียบในผลตรวจ ผู้ใช้ควรตรวจกับฉบับจริง (ระเบียบสำนักนายกรัฐมนตรีว่าด้วยงานสารบรรณ และหนังสือ นร 0106/ว 2019
+  ซึ่งไม่ได้รวมอยู่ใน repo นี้ ขอรับจากสำนักนายกรัฐมนตรี)
+
+## ข้อแลกเปลี่ยนของ wrap (`thai-docx`)
 
 1. เป็นขั้น **สุดท้ายก่อนส่ง/พิมพ์** ข้อความที่พิมพ์เพิ่มภายหลังจะไม่ได้ป้ายไทย ให้ `unwrap` ก่อนแก้ แล้ว `wrap` ใหม่
 2. เส้นตรวจคำสะกดต้องซ่อน (`fix` ทำให้อัตโนมัติ) เพราะ Word จะมองคำไทยเป็นภาษาอังกฤษ
@@ -81,7 +119,7 @@ python "<โฟลเดอร์ skill>/scripts/thaidocx.py" segment "อำเ
 | ส่วน | สัญญาอนุญาต |
 |---|---|
 | โค้ดของ repo | Apache-2.0 (ไฟล์ `LICENSE`) |
-| ส่วนที่มาจาก SARABUN.AI (กปภ.) | Apache-2.0 คง NOTICE เดิม ไม่รวมตราและโลโก้ของหน่วยงาน |
+| ส่วนที่มาจาก SARABUN.AI (กปภ.) รวมตัวสร้างหนังสือราชการ (`official/`) | Apache-2.0 คง NOTICE เดิม ไม่รวมตราและโลโก้ของหน่วยงาน ไม่ให้สิทธิ์ใช้ตราครุฑหรือตราหน่วยงาน |
 | newmm / TCC จาก PyThaiNLP | Apache-2.0 |
 | รายการคำทั่วไป (`words_th.txt` จาก PyThaiNLP) | CC0-1.0 (ตาม NOTICE) |
 | รายชื่อคน/นามสกุล (thai-names-corpus) | CC BY-SA 4.0 |
@@ -89,7 +127,7 @@ python "<โฟลเดอร์ skill>/scripts/thaidocx.py" segment "อำเ
 | khammoon โค้ด | Apache-2.0 |
 | khammoon โมเดล `weights.npz` | **CC BY-NC-SA 4.0 ห้ามใช้เชิงพาณิชย์** |
 
-**ใช้เชิงพาณิชย์:** ใช้ `thai-docx-nokhammoon.zip` (ไม่มีโมเดล khammoon ตัวตัดคำใช้พจนานุกรมอย่างเดียว)
+**ใช้เชิงพาณิชย์:** ใช้ `thai-docx-nokhammoon.zip` และ `thai-official-letters-nokhammoon.zip` (ไม่มีโมเดล khammoon ตัวตัดคำใช้พจนานุกรมอย่างเดียว)
 หรือสร้างเองด้วย `python tools/build.py --without-khammoon` รายละเอียดที่มาและเงื่อนไขทั้งหมดอยู่ใน `NOTICE`
 
 **ข้อควรระวัง:** การติดตั้งเป็น Claude Code plugin ได้ไฟล์ครบเสมอ รวมโมเดล khammoon (CC BY-NC-SA ห้ามใช้เชิงพาณิชย์)
@@ -102,7 +140,7 @@ python -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest -q
 python tools/build.py            # คัดลอก src/thaidocs เข้าโฟลเดอร์ skill
 python tools/build.py --check    # ตรวจว่าสำเนาตรงกับ src
-python tools/build.py --zip      # สร้าง dist/thai-docx.zip และ dist/thai-docx-nokhammoon.zip
+python tools/build.py --zip      # สร้าง zip ของทั้งสอง skill ใน dist/ (รวมแบบไม่มี khammoon)
 ```
 
-แก้โค้ดที่ `src/thaidocs/` เท่านั้น สำเนาใน `plugins/thai-docs/skills/thai-docx/scripts/thaidocs/` สร้างจาก build
+แก้โค้ดที่ `src/thaidocs/` เท่านั้น สำเนาใน `plugins/thai-docs/skills/*/scripts/thaidocs/` สร้างจาก build

@@ -29,7 +29,7 @@ def mk(doc_type, **over):
 
 AGENCY = AgencyInfo(
     org="กรมตัวอย่าง", address=["กรมตัวอย่าง", "ถนนตัวอย่าง กรุงเทพมหานคร ๑๐๐๐๐"],
-    department="กองตัวอย่าง", phone="๐ ๒๐๐๐ ๐๐๐๐", fax="๐ ๒๐๐๐ ๐๐๐๑", email="saraban@example.org",
+    department="กองตัวอย่าง", phone="๐ ๒๐๐๐ ๐๐๐๐", fax="๐ ๒๐๐๐ ๐๐๐๑", email="saraban@example.com",
     doc_no_prefix="ตย", signer_name="นายสมมติ ตัวอย่าง", signer_position=["อธิบดีกรมตัวอย่าง"])
 
 
@@ -86,17 +86,17 @@ def test_agency_fills_placeholders_and_blanks():
     assert out.agency == AGENCY.address
     assert out.owner_unit == "กองตัวอย่าง"
     assert out.phone == "๐ ๒๐๐๐ ๐๐๐๐"
-    assert out.fax == AGENCY.fax and out.email == "saraban@example.org"
+    assert out.fax == AGENCY.fax and out.email == "saraban@example.com"
     assert out.signer.name == "นายสมมติ ตัวอย่าง"
     assert out.signer.position == ["อธิบดีกรมตัวอย่าง"]
 
 
 def test_agency_does_not_overwrite_given_values():
-    d = mk("external_letter", owner_unit="กองอื่น", phone="๐ ๑๑๑๑ ๑๑๑๑", email="a@example.org",
+    d = mk("external_letter", owner_unit="กองอื่น", phone="๐ ๑๑๑๑ ๑๑๑๑", email="a@example.com",
            **{"signer.name": "นางสาวผู้อื่น ตัวอย่าง"})
     out = fill(d, AGENCY)
     assert out.owner_unit == "กองอื่น" and out.phone == "๐ ๑๑๑๑ ๑๑๑๑"
-    assert out.email == "a@example.org" and out.fax == "๐ ๒๐๐๐ ๐๐๐๑"
+    assert out.email == "a@example.com" and out.fax == "๐ ๒๐๐๐ ๐๐๐๑"
     assert out.signer.name == "นางสาวผู้อื่น ตัวอย่าง"
     assert out.agency == d.agency
 

@@ -328,6 +328,16 @@ def test_check_json_with_profile_has_no_placeholder_for_filled(run, tmp_path):
     assert "PLACEHOLDER" not in out
 
 
+def test_check_json_dedups_identical_findings(run, tmp_path):
+    # field เดียวมี [ระบุ] สองที่ ต้องรายงาน PLACEHOLDER ครั้งเดียว (เหมือน render)
+    data = copy.deepcopy(load_example("external_letter"))
+    data["phone"] = "[ระบุ]/[ระบุ]"
+    src = write_json(tmp_path / "e.json", data)
+    _, out, _ = run("check", src)
+    lines = [ln for ln in out.splitlines() if "PLACEHOLDER" in ln]
+    assert len(lines) == 1 and "[phone]" in lines[0]
+
+
 def test_check_bad_docx(run, tmp_path):
     f = tmp_path / "x.docx"
     f.write_bytes(b"not a zip")

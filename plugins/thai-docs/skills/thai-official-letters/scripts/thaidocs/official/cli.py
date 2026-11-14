@@ -179,6 +179,17 @@ def _print_findings(findings) -> None:
         print(f"  {_LEVEL_TH[x.level]} {x.code}: {x.message}{extra}")
 
 
+def _dedup(findings) -> list:
+    """ตัดข้อค้นพบที่ซ้ำกันทุกส่วน (ระดับ รหัส ข้อความ ตำแหน่ง) คงลำดับเดิม"""
+    out, seen = [], set()
+    for x in findings:
+        key = (x.level, x.code, x.message, x.where)
+        if key not in seen:
+            seen.add(key)
+            out.append(x)
+    return out
+
+
 def _counts(findings) -> str:
     n = {k: sum(x.level == k for x in findings) for k in _LEVEL_TH}
     return f"ข้อผิดพลาด {n['error']} คำเตือน {n['warning']} ข้อสังเกต {n['info']}"
@@ -247,12 +258,7 @@ def cmd_render(a) -> int:
     else:
         _write_bytes(data, out)
 
-    findings, seen = [], set()
-    for x in check_document(doc, spec) + check_docx(out, spec):
-        key = (x.level, x.code, x.message, x.where)
-        if key not in seen:
-            seen.add(key)
-            findings.append(x)
+    findings = _dedup(check_document(doc, spec) + check_docx(out, spec))
     print(f"สร้างไฟล์ {out} ({_counts(findings)})")
     _print_findings([x for x in findings if x.level != "info"])
     if renderer.used_placeholder_emblem:
@@ -272,7 +278,7 @@ def cmd_check(a) -> int:
     if ext == ".json":
         from .fill import fill
         doc = fill(_parse(sc, _read_json(src), src), agency)
-        findings = check_document(doc, spec)
+        findings = _dedup(check_document(doc, spec))
     else:
         if not src.is_file():
             raise CliError(f"ไม่พบไฟล์ {src}")

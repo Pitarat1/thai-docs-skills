@@ -21,7 +21,7 @@
     "department": "กองตัวอย่าง",
     "phone": "๐ ๒๐๐๐ ๐๐๐๐",
     "fax": "๐ ๒๐๐๐ ๐๐๐๑",
-    "email": "saraban@example.org",
+    "email": "saraban@example.com",
     "doc_no_prefix": "ตย ๐๐๐๑",
     "signer_name": "นายสมมติ ตัวอย่าง",
     "signer_position": ["ผู้อำนวยการกองตัวอย่าง"]

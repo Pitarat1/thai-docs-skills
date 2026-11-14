@@ -42,7 +42,7 @@ def test_placeholders():
 
 def test_digits():
     assert has_arabic_digits("ปี 2569") and not has_arabic_digits("ปี ๒๕๖๙")
-    assert not has_arabic_digits("saraban1@example.org")
+    assert not has_arabic_digits("saraban1@example.com")
     assert to_arabic_digits("๑๒") == "12"
 
 
@@ -74,6 +74,6 @@ def test_core_modules_import_without_pydantic():
 def test_has_arabic_digits_follows_core_keep_rules():
     assert not has_arabic_digits("โรค COVID-19 ระบาด")
     assert not has_arabic_digits("มาตรฐาน ISO 27001")
-    assert not has_arabic_digits("เว็บ https://example.org/a1 อีเมล a1@example.org")
+    assert not has_arabic_digits("เว็บ https://example.org/a1 อีเมล a1@example.com")
     assert has_arabic_digits("ปี 2569")
     assert has_arabic_digits("โรค COVID-19 ระบาดปี 2569")

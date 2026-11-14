@@ -257,7 +257,21 @@ def test_manifests():
     (plug,) = m["plugins"]
     assert plug["name"] == "thai-docs" and plug["source"] == "./plugins/thai-docs"
     p = json.loads((ROOT / "plugins" / "thai-docs" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-    assert p["name"] == "thai-docs" and p["version"] == "0.1.0" and p["description"]
+    assert p["name"] == "thai-docs" and p["description"]
+    assert p["version"] == "0.2.0" and m["metadata"]["version"] == "0.2.0" and plug["version"] == "0.2.0"
+    assert "หนังสือราชการ" in p["description"] and "หนังสือราชการ" in plug["description"]
+
+
+def test_version_matches_pyproject():
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert re.search(r'^version = "0\.2\.0"$', text, flags=re.M)
+
+
+def test_release_attaches_all_zips():
+    text = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    for z in ("thai-docx.zip", "thai-docx-nokhammoon.zip",
+              "thai-official-letters.zip", "thai-official-letters-nokhammoon.zip"):
+        assert f"dist/{z}" in text, z
 
 
 _PROBE = """

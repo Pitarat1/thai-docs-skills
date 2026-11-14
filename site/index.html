@@ -201,6 +201,19 @@ python "&lt;โฟลเดอร์ skill&gt;/scripts/thaidocx.py" unwrap ไ�
     <p>ไฟล์ปลายทางต้องเป็นคนละไฟล์กับต้นทาง และคำสั่งจะไม่ทำงานถ้าไฟล์ยังเปิดอยู่ใน Word</p>
   </section>
 
+  <section aria-labelledby="h-gov">
+    <h2 id="h-gov">หนังสือราชการ <code class="i">thai-official-letters</code></h2>
+    <p>ร่างหนังสือราชการเป็นไฟล์ Word ที่ระยะ ตำแหน่ง ขนาดอักษรตรงแนวทางการพิมพ์ แล้วตรวจก่อนส่ง ทำได้ 11 ชนิด: บันทึกข้อความ, หนังสือภายนอก, หนังสือประทับตรา, คำสั่ง, ระเบียบ, ข้อบังคับ, ประกาศ, แถลงการณ์, ข่าว, หนังสือรับรอง, รายงานการประชุม</p>
+    <div class="code"><pre><span class="c"># ดูร่างตัวอย่าง</span>
+python "&lt;โฟลเดอร์ skill&gt;/scripts/thaigov.py" example memo memo.json
+<span class="c"># สร้างไฟล์ Word จากร่าง</span>
+python "&lt;โฟลเดอร์ skill&gt;/scripts/thaigov.py" render memo.json memo.docx
+<span class="c"># ตรวจไฟล์</span>
+python "&lt;โฟลเดอร์ skill&gt;/scripts/thaigov.py" check memo.docx</pre><button class="copy" type="button">คัดลอก</button></div>
+    <p>ต้องมี Python 3.10 ขึ้นไป กับ <code class="i">pip install python-docx lxml pydantic</code> ติดตั้งผ่าน Claude Code plugin ได้พร้อม <code class="i">thai-docx</code> หรือใช้ <code class="i">thai-official-letters.zip</code> จาก Releases</p>
+    <p class="note">ไม่แจกตราครุฑและตราหน่วยงาน ไฟล์ที่สร้างมีกรอบแทนตรา ต้องใส่ตราเอง ผู้ใช้ต้องออกเลขหนังสือและลงนามเอง ตรวจผลที่พิมพ์ใน Word for Mac เท่านั้น ยังไม่ได้ตรวจกับ Word for Windows และ LibreOffice</p>
+  </section>
+
   <section aria-labelledby="h-trade">
     <h2 id="h-trade">ข้อแลกเปลี่ยนของ wrap</h2>
     <ol class="trade">
@@ -242,7 +255,7 @@ python "&lt;โฟลเดอร์ skill&gt;/scripts/thaidocx.py" unwrap ไ�
 
   <footer>
     <span>โค้ดและ Releases: <a href="https://github.com/Pitarat1/thai-docs-skills">github.com/Pitarat1/thai-docs-skills</a></span>
-    <span>โครงการต่อไป: หนังสือราชการ 11 ชนิด และรายงาน/งานวิจัย/บทความ</span>
+    <span>โครงการต่อไป: รายงาน/งานวิจัย/บทความ</span>
   </footer>
 </main>
 
