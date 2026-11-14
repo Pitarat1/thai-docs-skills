@@ -211,7 +211,7 @@ python "&lt;โฟลเดอร์ skill&gt;/scripts/thaigov.py" render memo.j
 <span class="c"># ตรวจไฟล์</span>
 python "&lt;โฟลเดอร์ skill&gt;/scripts/thaigov.py" check memo.docx</pre><button class="copy" type="button">คัดลอก</button></div>
     <p>ต้องมี Python 3.10 ขึ้นไป กับ <code class="i">pip install python-docx lxml pydantic</code> ติดตั้งผ่าน Claude Code plugin ได้พร้อม <code class="i">thai-docx</code> หรือใช้ <code class="i">thai-official-letters.zip</code> จาก Releases</p>
-    <p class="note">ไม่แจกตราครุฑและตราหน่วยงาน ไฟล์ที่สร้างมีกรอบแทนตรา ต้องใส่ตราเอง ผู้ใช้ต้องออกเลขหนังสือและลงนามเอง ไฟล์ที่ skill นี้สร้างยังไม่ได้ตรวจผลที่แสดงจริงใน Word for Mac, Word for Windows และ LibreOffice</p>
+    <p class="note">ไม่แจกตราครุฑและตราหน่วยงาน ไฟล์ที่สร้างมีกรอบแทนตรา ต้องใส่ตราเอง ผู้ใช้ต้องออกเลขหนังสือและลงนามเอง ตรวจผลที่แสดงจริงใน Word for Mac (14 พ.ย. 2569) กับเอกสารตัวอย่าง 4 ชนิด (หนังสือภายนอก บันทึกข้อความ หนังสือประทับตรา คำสั่ง) โดยให้ Word แปลงเป็น PDF แล้วดูทีละหน้า อีก 7 ชนิดมีแต่เทสอัตโนมัติ ยังไม่ได้ตรวจด้วยตา ส่วน Word for Windows และ LibreOffice ยังไม่ได้ทดสอบ</p>
   </section>
 
   <section aria-labelledby="h-trade">
@@ -229,7 +229,7 @@ python "&lt;โฟลเดอร์ skill&gt;/scripts/thaigov.py" check memo.do
           <tr><td>Word for Mac</td><td>ผ่าน: 10.9% → 0.2%</td></tr>
           <tr><td>Word for Windows</td><td>ผ่าน: ทีมผู้ใช้เปิดไฟล์จริง ตัดคำถูก (ถ้าเปิดปุ่ม ¶ จะเห็นกล่องเล็กระหว่างคำ ปิดแล้วหาย)</td></tr>
           <tr><td>LibreOffice</td><td><span class="pill q">รอตรวจ</span></td></tr>
-          <tr><td>thai-official-letters (ทั้งสามโปรแกรม)</td><td><span class="pill q">ยังไม่ได้ทดสอบ</span></td></tr>
+          <tr><td>thai-official-letters</td><td>Word for Mac: ตรวจ 4 จาก 11 ชนิด · Word for Windows และ LibreOffice: <span class="pill q">ยังไม่ได้ทดสอบ</span></td></tr>
         </tbody>
       </table>
     </div>
