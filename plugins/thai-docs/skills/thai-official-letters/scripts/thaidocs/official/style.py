@@ -1,6 +1,6 @@
 """ค่าการพิมพ์ตามแนวทางการพิมพ์หนังสือราชการภาษาไทยด้วยคอมพิวเตอร์
 (หนังสือสำนักนายกรัฐมนตรี ที่ นร ๐๑๐๖/ว ๒๐๑๙ ลงวันที่ ๓๐ พฤศจิกายน ๒๕๕๓ + คำอธิบายการพิมพ์ + แผ่นแบบ/ตัวอย่าง
- หนังสือภายนอก ภายใน ประทับตรา — ต้นฉบับเก็บไว้ที่ references/opm_w2019/ ดาวน์โหลดจาก opm.go.th/th/legal/content/37674)
+ หนังสือภายนอก ภายใน ประทับตรา — ดาวน์โหลดต้นฉบับได้จากเว็บไซต์สำนักนายกรัฐมนตรี opm.go.th/th/legal/content/37674)
 และระเบียบสำนักนายกรัฐมนตรีว่าด้วยงานสารบรรณ พ.ศ. ๒๕๒๖ และที่แก้ไขเพิ่มเติม
 
 ทุกค่าที่ renderer ใช้อยู่ที่นี่ที่เดียว (ไม่พึ่ง pydantic/Pillow/fontTools) — แต่ละค่าระบุที่มา:
@@ -113,9 +113,6 @@ class LayoutSpec:
     @property
     def text_width_cm(self) -> float:
         return self.page_w_cm - self.margin_left_cm - self.margin_right_cm
-
-
-DEFAULT_SPEC = LayoutSpec()
 
 
 DEFAULT_SPEC = LayoutSpec()
