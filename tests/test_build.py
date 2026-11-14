@@ -1,8 +1,10 @@
 """เทส tools/build.py, โฟลเดอร์ skill thai-docx และ manifest ของ plugin"""
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -131,6 +133,121 @@ def test_skill_frontmatter():
     for ref in ("layout-rules.md", "troubleshooting.md", "wrap-words.md", "preview.md"):
         assert (SKILL / "references" / ref).is_file()
         assert f"references/{ref}" in text
+
+
+_VENDOR_NAMES = ("Claude", "Codex", "Antigravity", "ChatGPT", "Gemini", "OpenAI", "Anthropic", "Copilot")
+
+
+def _skill_docs(skill: Path) -> list[Path]:
+    return [skill / "SKILL.md", *sorted((skill / "references").glob("*.md"))]
+
+
+@pytest.mark.parametrize("skill", [SKILL, OFFICIAL], ids=lambda p: p.name)
+def test_skill_references_exist(skill):
+    # ทุกไฟล์ references/… ที่ SKILL.md อ้าง ต้องมีอยู่จริง
+    text = (skill / "SKILL.md").read_text(encoding="utf-8")
+    refs = set(re.findall(r"references/([\w.-]+\.md)", text))
+    assert refs
+    for ref in refs:
+        assert (skill / "references" / ref).is_file(), ref
+
+
+@pytest.mark.parametrize("skill", [SKILL, OFFICIAL], ids=lambda p: p.name)
+def test_skill_docs_vendor_neutral(skill):
+    # เนื้อหา skill ใช้กับ AI ตัวใดก็ได้: ไม่อ้างชื่อผลิตภัณฑ์/ผู้ผลิต AI
+    for path in _skill_docs(skill):
+        text = path.read_text(encoding="utf-8").lower()
+        for name in _VENDOR_NAMES:
+            assert name.lower() not in text, f"{path.name}: {name}"
+
+
+def test_official_skill_frontmatter():
+    from thaidocs.official.schema import DOC_TYPE_TH
+    text = (OFFICIAL / "SKILL.md").read_text(encoding="utf-8")
+    fm = _frontmatter(text)
+    assert set(fm) == {"name", "description"}
+    assert fm["name"] == "thai-official-letters"
+    assert 0 < len(fm["description"]) <= 1024
+    assert len(fm["description"].encode("utf-8")) <= 1024
+    assert sum(th in fm["description"] for th in DOC_TYPE_TH.values()) >= 5
+    assert len(text.splitlines()) <= 200
+    for ref in ("doc-types.md", "writing.md", "layout-w2019.md", "agency-profile.md", "preview.md"):
+        assert (OFFICIAL / "references" / ref).is_file()
+        assert f"references/{ref}" in text
+
+
+def test_official_skill_rules_text():
+    text = (OFFICIAL / "SKILL.md").read_text(encoding="utf-8")
+    assert "pip install python-docx lxml pydantic" in text
+    assert "ห้ามแต่งชื่อ ตำแหน่ง เลขที่หนังสือ วันที่ ที่ผู้ใช้ไม่ได้ให้ ให้ใส่ `[ระบุ…]`" in text
+    assert "บอกผู้ใช้ว่าต้องใส่ตราเอง ออกเลข และลงนามเอง" in text
+
+
+def _subcommands(parser: argparse.ArgumentParser) -> dict[str, argparse.ArgumentParser]:
+    (sub,) = [a for a in parser._actions if isinstance(a, argparse._SubParsersAction)]
+    return dict(sub.choices)
+
+
+def test_official_skill_documents_cli():
+    # ทุกคำสั่งและตัวเลือกของ thaigov ต้องปรากฏใน SKILL.md
+    from thaidocs.official.cli import _parser
+    text = (OFFICIAL / "SKILL.md").read_text(encoding="utf-8")
+    cmds = _subcommands(_parser())
+    assert set(cmds) == {"types", "schema", "example", "render", "check"}
+    for name, sub in cmds.items():
+        assert f"`{name}" in text, name
+        for action in sub._actions:
+            for opt in action.option_strings:
+                if opt.startswith("--") and opt != "--help":
+                    assert re.search(rf"`[^`]*{re.escape(opt)}(?![\w-])", text), f"{name} {opt}"
+
+
+def test_official_finding_codes_documented():
+    from thaidocs.official.checker import ALL_CODES
+    text = (OFFICIAL / "SKILL.md").read_text(encoding="utf-8") + \
+        (OFFICIAL / "references" / "doc-types.md").read_text(encoding="utf-8")
+    missing = [c for c in ALL_CODES if f"`{c}`" not in text]
+    assert not missing, missing
+
+
+def _json_blocks(text: str) -> list[str]:
+    return re.findall(r"```json\n(.*?)```", text, flags=re.S)
+
+
+def test_official_skill_example_draft_is_valid():
+    # ร่างตัวอย่างใน SKILL.md ต้องผ่านการตรวจโครง และใส่ [ระบุ…] แทนสิ่งที่ผู้ใช้ไม่ได้ให้
+    from thaidocs.official.schema import parse_doc
+    (block,) = _json_blocks((OFFICIAL / "SKILL.md").read_text(encoding="utf-8"))
+    assert "[ระบุ" in block
+    parse_doc(json.loads(block))
+
+
+def test_agency_profile_doc(tmp_path):
+    # ตัวอย่าง agency.json ในเอกสารต้องอ่านได้จริง และเอกสารอธิบายทุก key ที่รับรอง
+    from dataclasses import fields
+
+    from thaidocs.official.profile import AgencyInfo, load_profile
+    from thaidocs.official.style import DOCUMENTED_LAYOUT_KEYS
+    text = (OFFICIAL / "references" / "agency-profile.md").read_text(encoding="utf-8")
+    for key in (*DOCUMENTED_LAYOUT_KEYS, *(f.name for f in fields(AgencyInfo))):
+        assert f"`{key}`" in text, key
+    (block,) = _json_blocks(text)
+    data = json.loads(block)
+    data.get("layout", {}).pop("emblem_png", None)      # ไม่ต้องมีไฟล์ตราจริงในเทส
+    p = tmp_path / "agency.json"
+    p.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    agency, _ = load_profile(p)
+    assert agency is not None and agency.org
+
+
+def test_layout_doc_covers_spec_defaults():
+    # ตารางค่าการพิมพ์ต้องมีทุก field ของ LayoutSpec ที่มีป้ายที่มา ([ว2019] [ระเบียบ] [แผ่นแบบ] [ปฏิบัติ]) ใน style.py
+    src = (ROOT / "src" / "thaidocs" / "official" / "style.py").read_text(encoding="utf-8")
+    tagged = re.findall(r"^\s+(\w+):.*#\s*\[(?:ว2019|ระเบียบ|แผ่นแบบ|ปฏิบัติ)", src, flags=re.M)
+    assert len(tagged) >= 15
+    text = (OFFICIAL / "references" / "layout-w2019.md").read_text(encoding="utf-8")
+    missing = [k for k in tagged if f"`{k}`" not in text]
+    assert not missing, missing
 
 
 def test_manifests():
