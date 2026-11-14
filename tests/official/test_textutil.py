@@ -1,5 +1,7 @@
 from datetime import date
 
+import pytest
+
 from thaidocs.official import salutations
 from thaidocs.official.textutil import (
     clean_text, find_placeholders, has_arabic_digits, is_placeholder, merge_list_lines,
@@ -32,6 +34,8 @@ def test_split_paragraphs():
 def test_thai_date():
     assert thai_date(date(2026, 11, 14)) == "๑๔ พฤศจิกายน ๒๕๖๙"
     assert thai_date(date(2026, 11, 14), with_day_prefix=True).startswith("วันที่ ๑๔")
+    with pytest.raises(TypeError):
+        thai_date()                    # ไม่เดาวันที่ปัจจุบันให้ ผู้เรียกต้องส่งวันที่เอง
 
 
 def test_placeholders():

@@ -6,6 +6,8 @@ render_example(doc_type, *, spec=None, emblem=None, **overrides) -> docx.Documen
         render_example("memo", **{"signer.name": "", "body.cause": ["ด้วย..."]})
     ค่า None ของ key ระดับบนสุดใดๆ ก็ส่งผ่านตามนั้น (เช่น fax=None)
   - spec: LayoutSpec ที่ใช้ (None = DEFAULT_SPEC); emblem: path ไฟล์ตรา (None = ไม่ส่ง)
+  - ไม่ผ่าน fill ยกเว้นข้อความส่งสำเนาของหนังสือประทับตราที่มี forwarded แต่ไม่มี paragraphs
+    (ตัวอย่าง stamp_letter เป็นแบบนี้ และคำสั่ง render เติมให้ผ่าน fill เสมอ)
   - คืน Document ที่บันทึกลงไฟล์จริงแล้วเปิดกลับด้วย python-docx
     doc.saved_path = path ไฟล์ .docx, doc.renderer = DocxRenderer ที่ใช้สร้าง
     (อ่าน doc.renderer.used_placeholder_emblem ได้)
@@ -20,8 +22,9 @@ import copy
 import pytest
 from docx import Document
 
+from thaidocs.official.fill import forward_paragraphs
 from thaidocs.official.render import DocxRenderer
-from thaidocs.official.schema import load_example, parse_doc
+from thaidocs.official.schema import DocType, load_example, parse_doc
 from thaidocs.official.style import DEFAULT_SPEC
 
 
@@ -42,6 +45,8 @@ def render_example(tmp_path):
         for key, value in overrides.items():
             _set_path(data, key, value)
         model = parse_doc(data)
+        if model.doc_type == DocType.STAMP_LETTER and model.forwarded and not model.paragraphs:
+            model.paragraphs = forward_paragraphs(model.issuer, model.forwarded)
         renderer = DocxRenderer(spec or DEFAULT_SPEC, emblem=emblem)
         counter["n"] += 1
         path = tmp_path / f"{doc_type}-{counter['n']}.docx"

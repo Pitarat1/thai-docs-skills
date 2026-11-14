@@ -8,8 +8,10 @@ from thaidocs.official.profile import (
 )
 from thaidocs.official.style import DEFAULT_SPEC, DOCUMENTED_LAYOUT_KEYS, LayoutSpec
 
-PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 8
-JPG = b"\xff\xd8\xff\xe0" + b"\0" * 8
+PNG = PLACEHOLDER_EMBLEM.read_bytes()
+# JPEG เล็กที่สุดที่อ่านขนาดได้ (SOI + APP0/JFIF + SOF0 1x1 + EOI)
+JPG = (b"\xff\xd8" + b"\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+       + b"\xff\xc0\x00\x0b\x08\x00\x01\x00\x01\x01\x01\x11\x00" + b"\xff\xd9")
 
 
 @pytest.fixture
@@ -141,7 +143,9 @@ def test_emblem_invalid(home):
     folder.mkdir()
     bad = home / "bad.png"
     bad.write_bytes(b"GIF89a....")
-    for p in (home / "none.png", folder, bad):
+    truncated = home / "truncated.png"
+    truncated.write_bytes(b"\x89PNG\r\n\x1a\n" + b"garbage")
+    for p in (home / "none.png", folder, bad, truncated):
         with pytest.raises(ProfileError):
             resolve_emblem(p, DEFAULT_SPEC)
     with pytest.raises(ProfileError):
@@ -152,3 +156,56 @@ def test_placeholder_emblem():
     assert PLACEHOLDER_EMBLEM.is_file()
     assert PLACEHOLDER_EMBLEM.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
     assert PLACEHOLDER_EMBLEM.stat().st_size < 20000
+
+
+def test_truncated_emblem_message_names_file(home):
+    p = home / "cut.png"
+    p.write_bytes(PNG[:40])
+    with pytest.raises(ProfileError, match="cut.png") as e:
+        resolve_emblem(p, DEFAULT_SPEC)
+    assert "ตรา" in str(e.value)
+
+
+@pytest.mark.parametrize("fmt", ["หน้า", "{} / {}", "- {0} -"])
+def test_page_number_fmt_needs_one_slot(home, fmt):
+    p = write(home / "a.json", {"layout": {"page_number_fmt": fmt}})
+    with pytest.raises(ProfileError, match="page_number_fmt"):
+        load_profile(p)
+
+
+def test_page_number_fmt_ok(home):
+    p = write(home / "a.json", {"layout": {"page_number_fmt": "หน้า {}"}})
+    assert load_profile(p)[1].page_number_fmt == "หน้า {}"
+
+
+@pytest.mark.parametrize("key,value", [("margin_left_cm", 0), ("margin_top_cm", -1), ("memo_margin_top_cm", 0),
+                                       ("para_indent_cm", -0.5), ("body_pt", -16), ("para_before_pt", -6),
+                                       ("page_number_pt", -1)])
+def test_negative_or_zero_sizes_rejected(home, key, value):
+    p = write(home / "a.json", {"layout": {key: value}})
+    with pytest.raises(ProfileError, match=key):
+        load_profile(p)
+
+
+def test_zero_spacing_allowed(home):
+    p = write(home / "a.json", {"layout": {"para_before_pt": 0, "separator_cm": 0}})
+    assert load_profile(p)[1].para_before_pt == 0
+
+
+def test_omit_signature_unknown_type(home):
+    p = write(home / "a.json", {"layout": {"omit_signature": ["memo", "บันทึก"]}})
+    with pytest.raises(ProfileError, match="omit_signature") as e:
+        load_profile(p)
+    assert "บันทึก" in str(e.value)
+
+
+def test_doc_type_codes_match_schema():
+    from thaidocs.official.profile import DOC_TYPE_CODES
+    from thaidocs.official.schema import DocType
+    assert set(DOC_TYPE_CODES) == {t.value for t in DocType}
+
+
+def test_unread_layout_fields_removed():
+    assert "date_be_rules" not in LayoutSpec.__dataclass_fields__
+    assert "doc_no_prefix" not in LayoutSpec.__dataclass_fields__
+    assert "doc_no_prefix" in AgencyInfo.__dataclass_fields__

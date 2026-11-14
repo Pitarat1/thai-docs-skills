@@ -1,6 +1,8 @@
 """ตัวช่วยข้อความสำหรับหนังสือราชการ: placeholder, วันที่ไทย, เลขไทย/อารบิก, จุดห้ามตัดบรรทัด
 
 ไม่พึ่ง pydantic
+
+ดัดแปลงจากโครงการต้นทางภายใต้ Apache License 2.0 ดู NOTICE ของ repo
 """
 from __future__ import annotations
 
@@ -52,9 +54,8 @@ def has_arabic_digits(text: str) -> bool:
     return bool(ARABIC_DIGIT_RE.search(stripped))
 
 
-def thai_date(d: date | None = None, *, with_day_prefix: bool = False) -> str:
-    """date(2026, 11, 14) -> '๑๔ พฤศจิกายน ๒๕๖๙'"""
-    d = d or date.today()
+def thai_date(d: date, *, with_day_prefix: bool = False) -> str:
+    """date(2026, 11, 14) -> '๑๔ พฤศจิกายน ๒๕๖๙' (ต้องส่งวันที่เอง ไม่ใช้วันนี้แทน)"""
     s = f"{d.day} {THAI_MONTHS[d.month - 1]} {d.year + 543}"
     if with_day_prefix:
         s = "วันที่ " + s

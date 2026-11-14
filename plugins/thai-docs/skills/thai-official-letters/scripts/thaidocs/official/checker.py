@@ -2,13 +2,15 @@
 
 check_document(doc, spec) ตรวจโครงสร้าง/ถ้อยคำของร่างก่อนสร้างไฟล์ ข้อที่อ้างระเบียบสำนักนายกรัฐมนตรี
                           ว่าด้วยงานสารบรรณ พ.ศ. ๒๕๒๖ และที่แก้ไขเพิ่มเติมมี `ref` เป็นเลขข้อ
-check_docx(path, spec)    ตรวจไฟล์ .docx: ขอบ ฟอนต์ ขนาด ตรา หัวบันทึกข้อความ (ref "ว ๒๐๑๙" = แนวทางการพิมพ์
-                          หนังสือราชการภาษาไทยด้วยคอมพิวเตอร์ ของสำนักนายกรัฐมนตรี)
+check_docx(path, spec)    ตรวจไฟล์ .docx: ขอบ ฟอนต์ ขนาด ตรา หัวบันทึกข้อความ ช่อง [ระบุ…] ที่เหลือ
+                          (ref "ว ๒๐๑๙" = แนวทางการพิมพ์หนังสือราชการภาษาไทยด้วยคอมพิวเตอร์ ของสำนักนายกรัฐมนตรี)
 
 ระดับ: error = ขัดกับระเบียบ/แนวทางที่อ้างใน ref; warning/info = ข้อสังเกต
 ธรรมเนียมการเขียนที่ไม่มีระเบียบรองรับเป็น warning/info เท่านั้น และไม่มี ref
 
 ALL_CODES = รหัสทุกตัวที่โมดูลนี้ออกได้ (เทสตรวจว่าตรงกับซอร์ส; เอกสารผู้ใช้ใช้ตัวนี้เป็นรายการอ้างอิง)
+
+ดัดแปลงจากโครงการต้นทางภายใต้ Apache License 2.0 ดู NOTICE ของ repo
 """
 from __future__ import annotations
 
@@ -18,6 +20,7 @@ from pathlib import Path
 from typing import Literal
 
 from . import salutations
+from .fill import forward_paragraphs
 from .schema import (DOC_TYPE_REF, AnnouncementDoc, AnyDoc, CertificateDoc, DocType, ExternalLetterDoc,
                      MemoDoc, MinutesDoc, OrderDoc, RegulationDoc, StampLetterDoc)
 from .style import DEFAULT_SPEC, NATIONAL_FONTS, LayoutSpec
@@ -31,7 +34,7 @@ ALL_CODES: tuple[str, ...] = (
     "PLACEHOLDER", "INFORMAL_WORD", "DATE_FORMAT", "DATE_BE", "DATE_DAY_BLANK", "SUBJECT_LONG",
     "SIGNER_PAREN", "DOC_NO", "MEMO_PROPOSAL", "MEMO_PHONE", "BODY_CAUSE", "BODY_PURPOSE",
     "BODY_CONCLUSION", "BODY_OPENING", "SALUTATION_PAIR", "SALUTATION_RANK", "REF_LATEST", "OWNER_UNIT",
-    "STAMP_NOTIFY_ONLY", "STAMP_CONCLUSION", "STAMP_SCOPE", "ORDER_NO", "ORDER_EFFECTIVE",
+    "STAMP_NOTIFY_ONLY", "STAMP_CONCLUSION", "STAMP_SCOPE", "STAMP_FORWARDED_IGNORED", "ORDER_NO", "ORDER_EFFECTIVE",
     "REG_ARTICLES", "REG_NAME", "REG_WORD", "REG_EFFECTIVE", "REG_KEEPER", "REG_EDITION", "BYLAW_AUTHORITY",
     "ANN_BODY", "CERT_OPENING", "MIN_AGENDA", "MIN_RESOLUTION",
     # ถ้อยคำ
@@ -135,8 +138,8 @@ def text_quality(text: str, where: str = "") -> list[Finding]:
     if not text:
         return f
     if _PUA_RE.search(text):
-        f.append(Finding("error", "TEXT_PUA", "พบอักษรไทยรหัสพิเศษของฟอนต์เก่า (วรรณยุกต์/สระอาจหายเมื่อเปลี่ยนฟอนต์) "
-                         "— พิมพ์คำนั้นใหม่ด้วยฟอนต์แห่งชาติ", where, _GUIDE))
+        f.append(Finding("warning", "TEXT_PUA", "พบอักษรไทยรหัสพิเศษของฟอนต์เก่า (วรรณยุกต์/สระอาจหายเมื่อเปลี่ยนฟอนต์) "
+                         "— พิมพ์คำนั้นใหม่ด้วยฟอนต์แห่งชาติ", where))
     if _SPLIT_AM_RE.search(text):
         f.append(Finding("warning", "TEXT_SARA_AM", "พบ 'ํ' + 'า' แทนสระ 'ำ' — ค้นหาคำไม่เจอ ให้พิมพ์ 'ำ' ใหม่", where))
     for m in _DUP_RE.finditer(text):
@@ -209,8 +212,9 @@ def check_document(doc: AnyDoc, spec: LayoutSpec = DEFAULT_SPEC) -> list[Finding
     if signer and signer.name.strip().startswith("(") and doc.doc_type.value not in spec.omit_signature:
         f.append(Finding("info", "SIGNER_PAREN", "ไม่ต้องใส่วงเล็บ ระบบพิมพ์ชื่อเต็มในวงเล็บให้", "signer.name", "ข้อ ๑๑.๑๐"))
 
-    # ---- หนังสือโต้ตอบ: ที่ = รหัส/เลขทะเบียนส่ง (ข้อ ๑๑.๑, ๑๒.๒, ๑๔.๑)
-    if isinstance(doc, (MemoDoc, ExternalLetterDoc, StampLetterDoc)) and "/" not in doc.doc_no:
+    # ---- หนังสือโต้ตอบ: ที่ = รหัส/เลขทะเบียนส่ง (ข้อ ๑๑.๑, ๑๒.๒, ๑๔.๑) — ช่อง [ระบุ…] รายงานเป็น PLACEHOLDER แล้ว
+    if isinstance(doc, (MemoDoc, ExternalLetterDoc, StampLetterDoc)) and "/" not in doc.doc_no \
+            and not find_placeholders(doc.doc_no):
         f.append(Finding("error", "DOC_NO", "ที่ ต้องเป็น 'รหัสตัวพยัญชนะและเลขประจำของเจ้าของเรื่อง/เลขทะเบียนหนังสือส่ง'",
                          "doc_no", _ref(_DOC_NO_REF, doc)))
 
@@ -272,13 +276,20 @@ def check_document(doc: AnyDoc, spec: LayoutSpec = DEFAULT_SPEC) -> list[Finding
             f.append(Finding("info", "STAMP_CONCLUSION", "หนังสือประทับตราที่แจ้งเพื่อทราบปิดด้วย 'จึงเรียนมาเพื่อทราบ'"
                              + _CUSTOM, "paragraphs"))
 
+    if isinstance(doc, StampLetterDoc) and doc.forwarded and doc.paragraphs \
+            and doc.paragraphs != forward_paragraphs(doc.issuer, doc.forwarded):
+        f.append(Finding("warning", "STAMP_FORWARDED_IGNORED",
+                         "ร่างมีทั้ง forwarded และ paragraphs ระบบใช้ paragraphs และไม่พิมพ์รายการหนังสือใน forwarded "
+                         "— ลบ paragraphs เพื่อให้ระบบเขียนข้อความส่งสำเนาเอง หรือเขียนชื่อหนังสือต้นเรื่องใน paragraphs "
+                         "แล้วลบ forwarded", "forwarded"))
+
     if isinstance(doc, StampLetterDoc) and doc.speed is None and len(" ".join(doc.paragraphs)) > 1200:
         f.append(Finding("info", "STAMP_SCOPE", "หนังสือประทับตราใช้เฉพาะเรื่องที่ไม่ใช่เรื่องสำคัญ — ตรวจว่าเรื่องนี้เข้าข้อ ๑๓",
                          "paragraphs", "ข้อ ๑๓"))
 
     # ---- หนังสือสั่งการ
     if isinstance(doc, OrderDoc):
-        if not YEAR_NO_RE.match(doc.doc_no):
+        if not YEAR_NO_RE.match(doc.doc_no) and not find_placeholders(doc.doc_no):
             f.append(Finding("error", "ORDER_NO", "ที่ ของคำสั่งต้องเป็น 'เลขที่/ปีพุทธศักราช' (เริ่ม ๑ ทุกปีปฏิทิน)",
                              "doc_no", "ข้อ ๑๖.๒"))
         if not doc.effective:
@@ -382,8 +393,14 @@ def check_docx(path: str | Path, spec: LayoutSpec = DEFAULT_SPEC) -> list[Findin
     paras = d.paragraphs
     cell_paras = [cp for t in d.tables for row in t.rows for cell in row.cells for cp in cell.paragraphs]
     all_paras = [*paras, *cell_paras]
+    seen_ph: set[str] = set()
     for i, p in enumerate(all_paras, 1):
-        f += text_quality(p.text, f"ย่อหน้า {i}: {p.text.strip()[:30]}")
+        where = f"ย่อหน้า {i}: {p.text.strip()[:30]}"
+        f += text_quality(p.text, where)
+        for ph in find_placeholders(p.text.replace("\xa0", " ")):       # ไฟล์ที่แก้ใน Word แล้วยังเหลือช่องว่าง
+            if ph not in seen_ph:
+                seen_ph.add(ph)
+                f.append(Finding("warning", "PLACEHOLDER", f"ยังไม่ได้กรอก {ph}", where))
 
     bad_fonts: set[str] = set()
     arabic = small = 0

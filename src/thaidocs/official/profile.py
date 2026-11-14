@@ -14,6 +14,10 @@ from .style import DEFAULT_SPEC, LayoutSpec
 
 PLACEHOLDER_EMBLEM = Path(__file__).parent / "data" / "emblem_placeholder.png"
 
+# รหัสชนิดหนังสือ (ตรงกับ schema.DocType — เทสตรวจ) ใช้ตรวจ layout.omit_signature โดยไม่ต้องนำเข้า pydantic
+DOC_TYPE_CODES = ("memo", "external_letter", "stamp_letter", "order", "regulation", "bylaw", "announcement",
+                  "statement", "news", "certificate", "minutes")
+
 _PNG = b"\x89PNG\r\n\x1a\n"
 _JPEG = b"\xff\xd8\xff"
 
@@ -73,6 +77,25 @@ def _coerce(name: str, value, tp, where: str):
     raise ProfileError(f"ค่า {where}.{name} ชนิดไม่ถูกต้อง: {value!r}")
 
 
+def _check_layout_value(key: str, value) -> None:
+    """ค่าที่ชนิดถูกแต่ใช้ไม่ได้: เลขหน้า ขนาด/ระยะติดลบ ขอบเป็นศูนย์ ชนิดหนังสือที่ไม่รู้จัก"""
+    if value is None:
+        return
+    if key == "page_number_fmt" and value.count("{}") != 1:
+        raise ProfileError(f"ค่า layout.page_number_fmt ต้องมี {{}} (ตำแหน่งเลขหน้า) หนึ่งที่พอดี เช่น \"- {{}} -\": "
+                           f"{value!r}")
+    if key.endswith(("_cm", "_pt")) and isinstance(value, (int, float)):
+        if "margin" in key and value <= 0:
+            raise ProfileError(f"ค่า layout.{key} (ขอบกระดาษ) ต้องมากกว่า 0: {value!r}")
+        if value < 0:
+            raise ProfileError(f"ค่า layout.{key} ต้องไม่ติดลบ: {value!r}")
+    if key == "omit_signature":
+        bad = [v for v in value if v not in DOC_TYPE_CODES]
+        if bad:
+            raise ProfileError(f"ค่า layout.omit_signature มีรหัสชนิดหนังสือที่ไม่รู้จัก: {', '.join(bad)} "
+                               f"(รหัสที่รับ: {', '.join(DOC_TYPE_CODES)})")
+
+
 def _layout_from(data: dict) -> LayoutSpec:
     hints = typing.get_type_hints(LayoutSpec)
     names = {f.name for f in fields(LayoutSpec)}
@@ -81,6 +104,7 @@ def _layout_from(data: dict) -> LayoutSpec:
         if key not in names:
             raise ProfileError(f"ไม่รู้จักค่า layout.{key} ในไฟล์ตั้งค่า")
         updates[key] = _coerce(key, value, hints[key], "layout")
+        _check_layout_value(key, updates[key])
     return replace(DEFAULT_SPEC, **updates)
 
 
@@ -140,6 +164,11 @@ def _check_emblem(path: Path) -> Path:
         raise ProfileError(f"อ่านไฟล์ตราไม่ได้: {path}") from e
     if not (head.startswith(_PNG) or head.startswith(_JPEG)):
         raise ProfileError(f"ไฟล์ตราต้องเป็น PNG หรือ JPEG: {path}")
+    from docx.image.image import Image          # อ่านหัวภาพแบบเดียวกับตอนใส่ลงเอกสาร (ไม่ต้องใช้ Pillow)
+    try:
+        Image.from_file(str(path))
+    except Exception as e:                      # ไฟล์เสีย/ตัดท้าย: python-docx โยนได้หลายชนิด
+        raise ProfileError(f"ไฟล์ตราอ่านเป็นรูปไม่ได้ ({path}): {type(e).__name__} {e}".rstrip()) from e
     return path
 
 

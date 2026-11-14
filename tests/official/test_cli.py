@@ -404,3 +404,38 @@ def test_unexpected_exception_safety_net(run, tmp_path, monkeypatch):
     monkeypatch.setattr("thaidocs.official.cli.cmd_types", lambda a: (_ for _ in ()).throw(KeyboardInterrupt()))
     with pytest.raises(KeyboardInterrupt):
         main(["types"])
+
+
+def test_render_failure_with_emblem_is_not_blamed_on_emblem(run, tmp_path, monkeypatch):
+    from thaidocs.official.profile import PLACEHOLDER_EMBLEM
+    src = tmp_path / "m.json"
+    run("example", "memo", src)
+
+    def boom(self, doc):
+        raise RuntimeError("พังตรงอื่น")
+    monkeypatch.setattr("thaidocs.official.render.DocxRenderer.render", boom)
+    code, _, err = run("render", src, tmp_path / "m.docx", "--emblem", PLACEHOLDER_EMBLEM)
+    assert code == 2 and "ข้อผิดพลาดที่ไม่คาดคิด" in err and "พังตรงอื่น" in err
+    assert "ไฟล์ตรา" not in err and "Traceback" not in err
+
+
+def test_check_docx_font_option(run, tmp_path):
+    src = tmp_path / "m.json"
+    run("example", "memo", src)
+    dest = tmp_path / "m.docx"
+    assert run("render", src, dest, "--font", "Angsana New")[0] == 0
+    code, out, _ = run("check", dest)
+    assert code == 1 and "FONT" in out
+    code, out, err = run("check", dest, "--font", "Angsana New")
+    assert code == 0 and "FONT" not in out, out + err
+
+
+def test_render_reports_each_placeholder_once(run, tmp_path):
+    data = copy.deepcopy(load_example("memo"))
+    data["date"] = "[ระบุวันที่]"
+    src = write_json(tmp_path / "m.json", data)
+    code, out, _ = run("render", src, tmp_path / "m.docx")
+    assert code == 0
+    assert len([ln for ln in out.splitlines() if "PLACEHOLDER" in ln]) == 1
+    code, out, _ = run("check", tmp_path / "m.docx")
+    assert code == 0 and "PLACEHOLDER" in out and "[ระบุวันที่]" in out

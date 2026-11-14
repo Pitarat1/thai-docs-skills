@@ -5,7 +5,7 @@
   example TYPE [OUT.json]                ตัวอย่างร่าง (พิมพ์ทาง stdout เมื่อไม่ระบุ OUT)
   render IN.json OUT.docx [--emblem FILE] [--profile FILE] [--font NAME] [--arabic-digits]
                           [--wrap-words] [--words FILE ...] [--force]
-  check IN.json|IN.docx [--profile FILE]
+  check IN.json|IN.docx [--profile FILE] [--font NAME]
 
 exit code: 0 สำเร็จ, 1 check พบปัญหาระดับ error, 2 ข้อผิดพลาดการใช้งาน/ข้อมูลเข้า (ข้อความไทยทาง stderr)
 pydantic นำเข้าเมื่อใช้คำสั่งเท่านั้น (ไม่มี -> แจ้งให้ติดตั้ง)
@@ -236,13 +236,8 @@ def cmd_render(a) -> int:
     except ProfileError as e:
         raise CliError(str(e)) from None
 
-    renderer = DocxRenderer(spec, emblem=emblem)
-    try:
-        data = renderer.render(doc)
-    except Exception as e:
-        if emblem is None:
-            raise                      # บั๊กอื่น: ให้ตัวดักสุดท้ายใน main() รายงาน
-        raise CliError(f"ไฟล์ตราอ่านเป็นรูปไม่ได้ ({emblem}): {e}") from None
+    renderer = DocxRenderer(spec, emblem=emblem)    # ไฟล์ตราเสียถูกดักแล้วใน resolve_emblem
+    data = renderer.render(doc)
     if a.wrap_words:
         import io
 
@@ -258,7 +253,8 @@ def cmd_render(a) -> int:
     else:
         _write_bytes(data, out)
 
-    findings = _dedup(check_document(doc, spec) + check_docx(out, spec))
+    # ช่อง [ระบุ…] รายงานจากร่างแล้ว (บอก field) ไม่รายงานซ้ำจากไฟล์
+    findings = _dedup(check_document(doc, spec) + [x for x in check_docx(out, spec) if x.code != "PLACEHOLDER"])
     print(f"สร้างไฟล์ {out} ({_counts(findings)})")
     _print_findings([x for x in findings if x.level != "info"])
     if renderer.used_placeholder_emblem:
@@ -275,6 +271,8 @@ def cmd_check(a) -> int:
     sc = _schema()
     from .checker import check_docx, check_document
     agency, spec = _profile(a.profile)
+    if a.font:
+        spec = replace(spec, font=a.font)
     if ext == ".json":
         from .fill import fill
         doc = fill(_parse(sc, _read_json(src), src), agency)
@@ -327,6 +325,7 @@ def _parser() -> argparse.ArgumentParser:
     s = sub.add_parser("check", help="ตรวจร่าง .json หรือไฟล์ .docx")
     s.add_argument("IN")
     s.add_argument("--profile", metavar="FILE", help="ไฟล์ตั้งค่าหน่วยงาน")
+    s.add_argument("--font", metavar="NAME", help="ฟอนต์ที่ใช้ตอน render (ความหมายเดียวกับ render --font)")
     s.set_defaults(fn=cmd_check)
     return p
 

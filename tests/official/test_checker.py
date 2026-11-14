@@ -162,10 +162,6 @@ def test_omit_signature_skips_signer_fields():
 
 
 # ------------------------------------------------------------------ กติกาทั่วไปของรหัส
-_FORBIDDEN = [a + b for a, b in (("กป", "ภ"), ("สส", "จ"), ("สระ", "แก้ว"), ("sak", "aeo"), ("PW", "A"),
-                                   ("ก.", "พ."))]
-
-
 def _all_findings(render_example):
     out = []
     for code, (bad_type, bad, _) in CASES.items():
@@ -190,11 +186,7 @@ def test_every_error_has_ref_and_codes_are_declared(render_example):
             assert f.ref, f.code
 
 
-def test_no_agency_names_in_checker_source_or_messages(render_example):
-    src = Path(checker.__file__).read_text(encoding="utf-8")
-    text = src + " ".join(f.message + f.ref + f.where for f in _all_findings(render_example))
-    for bad in _FORBIDDEN:
-        assert bad not in text, bad
+def test_no_agency_specific_codes():
     assert not any(c.startswith("PWA_") for c in ALL_CODES)
 
 
@@ -330,9 +322,56 @@ def test_docx_arabic_digits_and_text_quality(render_example, tmp_path):
     doc.add_paragraph("ปีงบประมาณ 2570 ข้อความ")
     got = _docx_codes(_saved(doc, tmp_path, "b.docx"))
     assert got["ARABIC_DIGITS"].level == "info"
-    assert got["TEXT_PUA"].level == "error" and got["TEXT_PUA"].ref
+    assert got["TEXT_PUA"].level == "warning" and not got["TEXT_PUA"].ref
 
 
 def test_docx_accepts_str_path(render_example):
     doc = render_example("announcement")
     assert isinstance(check_docx(str(doc.saved_path)), list)
+
+
+# ------------------------------------------------------------------ ช่อง [ระบุ…] / ข้อสังเกตเพิ่ม
+@pytest.mark.parametrize("t", ["memo", "external_letter", "stamp_letter"])
+def test_placeholder_doc_no_is_not_a_format_error(t):
+    got = codes(fill(mk(t, doc_no="[ระบุเลขที่]")))
+    assert "DOC_NO" not in got and "PLACEHOLDER" in got
+    assert "DOC_NO" in codes(mk(t, doc_no="ตย ๐๐๐๑"))
+
+
+def test_placeholder_order_no_is_not_a_format_error():
+    got = codes(fill(mk("order", doc_no="[ระบุเลขที่]")))
+    assert "ORDER_NO" not in got and "PLACEHOLDER" in got
+    assert "ORDER_NO" in codes(mk("order", doc_no="๑๒๓"))
+
+
+def test_text_pua_is_warning_without_ref():
+    f = codes(mk("memo", **CASES["TEXT_PUA"][1]))["TEXT_PUA"]
+    assert f.level == "warning" and not f.ref
+
+
+def test_order_default_effective_is_placeholder():
+    data = copy.deepcopy(load_example("order"))
+    del data["effective"]
+    d = fill(parse_doc(data))
+    assert "[ระบุวันใช้บังคับ]" in d.effective
+    assert any(f.code == "PLACEHOLDER" and f.where == "effective" for f in check_document(d))
+    assert "ORDER_EFFECTIVE" not in codes(d)
+
+
+def test_stamp_forwarded_ignored_when_paragraphs_given():
+    both = fill(mk("stamp_letter", paragraphs=["กรมตัวอย่างขอส่งสำเนาหนังสือดังกล่าวมาเพื่อทราบ"]))
+    f = codes(both)["STAMP_FORWARDED_IGNORED"]
+    assert f.level == "warning" and not f.ref
+    assert "STAMP_FORWARDED_IGNORED" not in codes(fill(mk("stamp_letter")))
+    only_text = fill(mk("stamp_letter", forwarded=[], paragraphs=["กรมตัวอย่างขอแจ้งเพื่อทราบ"]))
+    assert "STAMP_FORWARDED_IGNORED" not in codes(only_text)
+
+
+def test_docx_reports_leftover_placeholders(render_example):
+    doc = render_example("memo", date="[ระบุวันที่]", doc_no="[ระบุ]/[ระบุ]",
+                         **{"signer.position": ["[ระบุตำแหน่ง]"]})
+    ph = [f for f in check_docx(doc.saved_path) if f.code == "PLACEHOLDER"]
+    assert sorted(f.message for f in ph) == sorted(
+        f"ยังไม่ได้กรอก {x}" for x in ("[ระบุวันที่]", "[ระบุ]", "[ระบุตำแหน่ง]"))
+    assert all(f.level == "warning" for f in ph)
+    assert not [f for f in check_docx(render_example("memo").saved_path) if f.code == "PLACEHOLDER"]

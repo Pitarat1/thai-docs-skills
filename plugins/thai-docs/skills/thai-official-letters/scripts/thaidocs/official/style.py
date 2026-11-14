@@ -8,6 +8,8 @@
   [ระเบียบ] ระเบียบงานสารบรรณ (เลขข้อ)
   [แผ่นแบบ] วัดจากไฟล์แผ่นแบบ (.doc) ทางการของสำนักนายกรัฐมนตรีที่แนบกับ ว ๒๐๑๙
   [ปฏิบัติ] ค่าที่ใช้กันทั่วไปในคู่มือหน่วยงาน (แนวทางไม่ได้กำหนดตัวเลข) — ปรับได้ตามคู่มือหน่วยงาน
+
+ดัดแปลงจากโครงการต้นทางภายใต้ Apache License 2.0 ดู NOTICE ของ repo
 """
 from dataclasses import dataclass
 from typing import Optional
@@ -103,8 +105,6 @@ class LayoutSpec:
     memo_phone_tab_cm: Optional[float] = None      # "โทร" แยกไปแท็บนี้ในบรรทัดหน่วยงาน
     memo_signature_mode: str = "center"            # center = กึ่งกลางแท็บ signature_center_cm / paren = "(" ที่แนววันที่
     memo_section_first_cm: Optional[float] = None  # บันทึก ๒/๒: ย่อหน้าข้อความใต้หัวข้อ
-    date_be_rules: bool = False          # ตรวจการใช้ "พ.ศ." ในวันที่ตามคู่มือหน่วยงาน
-    doc_no_prefix: Optional[str] = None  # รหัสตัวพยัญชนะหน้าเลขที่หนังสือ (เช่น "มท")
     stamp_notify_only: bool = False      # หนังสือประทับตราใช้แจ้งเพื่อทราบเท่านั้น (แนวปฏิบัติของบางหน่วยงาน)
     omit_signature: tuple[str, ...] = ()  # ชนิดหนังสือที่ไม่พิมพ์ชื่อ/ตำแหน่งผู้ลงนาม (ลงนามในระบบสารบรรณอิเล็กทรอนิกส์)
 

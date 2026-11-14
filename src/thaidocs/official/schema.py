@@ -5,6 +5,8 @@
 ผู้ใช้หรือ AI เติมเฉพาะ field; ตัวจัดหน้าจัดรูปแบบให้
 
 โมดูลนี้เป็นโมดูลเดียวที่นำเข้า pydantic
+
+ดัดแปลงจากโครงการต้นทางภายใต้ Apache License 2.0 ดู NOTICE ของ repo
 """
 from __future__ import annotations
 
@@ -194,7 +196,8 @@ class OrderDoc(_Base):
     paragraphs: list[str] = Field(..., description="๑๖.๔ ข้อความ: เหตุ + อำนาจ (ถ้ามี) + สิ่งที่สั่ง")
     committees: list[Committee] = Field(default_factory=list,
                                         description="คำสั่งแต่งตั้ง: คณะกรรมการ/คณะทำงาน ตามลำดับข้อ ๑. ๒. ...")
-    effective: str = Field("ทั้งนี้ ตั้งแต่บัดนี้เป็นต้นไป", description="๑๖.๔ วันใช้บังคับ")
+    effective: str = Field("ทั้งนี้ ตั้งแต่[ระบุวันใช้บังคับ]เป็นต้นไป",
+                           description="๑๖.๔ วันใช้บังคับ เช่น 'ทั้งนี้ ตั้งแต่บัดนี้เป็นต้นไป' (ไม่ระบุ = ช่องให้ผู้ใช้กรอก)")
     date: str = Field(..., description="๑๖.๕ สั่ง ณ วันที่: '๒๑ ตุลาคม พ.ศ. ๒๕๖๙'")
     signer: Signer = Signer()                                        # ๑๖.๖–๑๖.๗
 
