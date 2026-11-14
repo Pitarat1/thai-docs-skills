@@ -211,7 +211,7 @@ python "&lt;โฟลเดอร์ skill&gt;/scripts/thaigov.py" render memo.j
 <span class="c"># ตรวจไฟล์</span>
 python "&lt;โฟลเดอร์ skill&gt;/scripts/thaigov.py" check memo.docx</pre><button class="copy" type="button">คัดลอก</button></div>
     <p>ต้องมี Python 3.10 ขึ้นไป กับ <code class="i">pip install python-docx lxml pydantic</code> ติดตั้งผ่าน Claude Code plugin ได้พร้อม <code class="i">thai-docx</code> หรือใช้ <code class="i">thai-official-letters.zip</code> จาก Releases</p>
-    <p class="note">ไม่แจกตราครุฑและตราหน่วยงาน ไฟล์ที่สร้างมีกรอบแทนตรา ต้องใส่ตราเอง ผู้ใช้ต้องออกเลขหนังสือและลงนามเอง ตรวจผลที่พิมพ์ใน Word for Mac เท่านั้น ยังไม่ได้ตรวจกับ Word for Windows และ LibreOffice</p>
+    <p class="note">ไม่แจกตราครุฑและตราหน่วยงาน ไฟล์ที่สร้างมีกรอบแทนตรา ต้องใส่ตราเอง ผู้ใช้ต้องออกเลขหนังสือและลงนามเอง ไฟล์ที่ skill นี้สร้างยังไม่ได้ตรวจผลที่แสดงจริงใน Word for Mac, Word for Windows และ LibreOffice</p>
   </section>
 
   <section aria-labelledby="h-trade">
@@ -224,11 +224,12 @@ python "&lt;โฟลเดอร์ skill&gt;/scripts/thaigov.py" check memo.do
     </ol>
     <div class="tbl">
       <table>
-        <thead><tr><th>ทดสอบกับ</th><th>สถานะ</th></tr></thead>
+        <thead><tr><th>ทดสอบกับ</th><th>สถานะ (ผลของ thai-docx)</th></tr></thead>
         <tbody>
           <tr><td>Word for Mac</td><td>ผ่าน: 10.9% → 0.2%</td></tr>
           <tr><td>Word for Windows</td><td>ผ่าน: ทีมผู้ใช้เปิดไฟล์จริง ตัดคำถูก (ถ้าเปิดปุ่ม ¶ จะเห็นกล่องเล็กระหว่างคำ ปิดแล้วหาย)</td></tr>
           <tr><td>LibreOffice</td><td><span class="pill q">รอตรวจ</span></td></tr>
+          <tr><td>thai-official-letters (ทั้งสามโปรแกรม)</td><td><span class="pill q">ยังไม่ได้ทดสอบ</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -250,7 +251,7 @@ python "&lt;โฟลเดอร์ skill&gt;/scripts/thaigov.py" check memo.do
         </tbody>
       </table>
     </div>
-    <p>ใช้เชิงพาณิชย์: ใช้ <code class="i">thai-docx-nokhammoon.zip</code> ซึ่งไม่มีโมเดล khammoon (ตัดคำด้วยพจนานุกรมอย่างเดียว) รายละเอียดอยู่ในไฟล์ NOTICE ของ repo</p>
+    <p>ใช้เชิงพาณิชย์: ใช้ <code class="i">thai-docx-nokhammoon.zip</code> และ <code class="i">thai-official-letters-nokhammoon.zip</code> ซึ่งไม่มีโมเดล khammoon (ตัดคำด้วยพจนานุกรมอย่างเดียว) รายละเอียดอยู่ในไฟล์ NOTICE ของ repo</p>
   </section>
 
   <footer>
