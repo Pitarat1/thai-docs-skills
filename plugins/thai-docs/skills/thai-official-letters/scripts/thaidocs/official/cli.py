@@ -226,14 +226,23 @@ def cmd_render(a) -> int:
         raise CliError(str(e)) from None
 
     renderer = DocxRenderer(spec, emblem=emblem)
-    data = renderer.render(doc)
+    try:
+        data = renderer.render(doc)
+    except Exception as e:
+        if emblem is None:
+            raise                      # บั๊กอื่น: ให้ตัวดักสุดท้ายใน main() รายงาน
+        raise CliError(f"ไฟล์ตราอ่านเป็นรูปไม่ได้ ({emblem}): {e}") from None
     if a.wrap_words:
         import io
 
         import docx
         from .. import wrap as wrapmod
         d = docx.Document(io.BytesIO(data))
-        wrapmod.wrap(d, _segmenter(a.words))
+        try:
+            seg = _segmenter(a.words)
+        except UnicodeDecodeError as e:
+            raise CliError(f"ไฟล์คำต้องเป็นข้อความ UTF-8: {e}") from None
+        wrapmod.wrap(d, seg)
         _save(d, out)
     else:
         _write_bytes(data, out)
@@ -324,6 +333,9 @@ def main(argv: list[str] | None = None) -> int:
         return a.fn(a)
     except CliError as e:
         print(f"ข้อผิดพลาด: {e}", file=sys.stderr)
+        return 2
+    except Exception as e:             # ตาข่ายสุดท้าย: ไม่ให้ traceback หลุดถึงผู้ใช้ (ไม่จับ SystemExit/KeyboardInterrupt)
+        print(f"ข้อผิดพลาดที่ไม่คาดคิด: {type(e).__name__}: {e}", file=sys.stderr)
         return 2
 
 

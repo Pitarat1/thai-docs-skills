@@ -360,3 +360,37 @@ def test_examples_have_no_error_or_warning(tmp_path):
         doc = fill(parse_doc(load_example(t)))
         bad = [f for f in check_document(doc) if f.level in ("error", "warning") and f.code != "PLACEHOLDER"]
         assert bad == [], (t.value, [(f.code, f.where) for f in bad])
+
+
+def test_corrupt_emblem_image(run, tmp_path):
+    src = tmp_path / "m.json"
+    run("example", "memo", src)
+    bad = tmp_path / "bad.png"
+    bad.write_bytes(b"\x89PNG\r\n\x1a\n" + b"garbage")
+    code, _, err = run("render", src, tmp_path / "m.docx", "--emblem", bad)
+    assert code == 2 and "ไฟล์ตรา" in err and "bad.png" in err and "Traceback" not in err
+    assert not (tmp_path / "m.docx").exists()
+
+
+def test_non_utf8_words_file(run, tmp_path):
+    src = tmp_path / "m.json"
+    run("example", "memo", src)
+    w = tmp_path / "w.txt"
+    w.write_bytes(b"\xff\xfe\x00bad")
+    code, _, err = run("render", src, tmp_path / "m.docx", "--wrap-words", "--words", w)
+    assert code == 2 and "UTF-8" in err and "Traceback" not in err
+
+
+def test_unexpected_exception_safety_net(run, tmp_path, monkeypatch):
+    src = tmp_path / "m.json"
+    run("example", "memo", src)
+
+    def boom(*a, **k):
+        raise RuntimeError("พัง")
+    monkeypatch.setattr("thaidocs.official.fill.fill", boom)
+    for argv in (("render", src, tmp_path / "m.docx"), ("check", src)):
+        code, _, err = run(*argv)
+        assert code == 2 and "ข้อผิดพลาดที่ไม่คาดคิด" in err and "Traceback" not in err
+    monkeypatch.setattr("thaidocs.official.cli.cmd_types", lambda a: (_ for _ in ()).throw(KeyboardInterrupt()))
+    with pytest.raises(KeyboardInterrupt):
+        main(["types"])
